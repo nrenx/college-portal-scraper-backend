@@ -168,6 +168,8 @@ class MidMarksScraper:
                 options = Options()
                 if self.headless:
                     options.add_argument('--headless')
+                    options.add_argument('--no-sandbox')  # Required for running in Docker
+                    options.add_argument('--disable-dev-shm-usage')  # Required for running in Docker
                 else:
                     # Make sure the browser window is visible
                     options.add_argument('--start-maximized')

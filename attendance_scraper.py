@@ -47,6 +47,13 @@ except ImportError:
 
 # Import login utilities and configuration
 from login_utils import create_session, login, BASE_URL
+# Import Selenium login utilities
+try:
+    from selenium_login_utils import create_driver, selenium_login
+    SELENIUM_LOGIN_AVAILABLE = True
+except ImportError:
+    SELENIUM_LOGIN_AVAILABLE = False
+    print("Warning: Selenium login utilities are not available. Using standard login.")
 from config import (
     USERNAME, PASSWORD, ATTENDANCE_PORTAL_URL,
     DEFAULT_ACADEMIC_YEARS, DEFAULT_SEMESTERS,
@@ -162,59 +169,17 @@ class AttendanceScraper:
             logger.info("Initialized attendance scraper in interactive mode")
 
         # Initialize Selenium WebDriver if available
-        if SELENIUM_AVAILABLE:
+        if SELENIUM_AVAILABLE and SELENIUM_LOGIN_AVAILABLE:
             try:
-                options = Options()
-                if self.headless:
-                    options.add_argument('--headless')
-                else:
-                    # Make sure the browser window is visible
-                    options.add_argument('--start-maximized')
-                    options.add_argument('--disable-extensions')
-                    options.add_argument('--disable-infobars')
-                    options.add_argument('--window-size=1920,1080')
-                    options.add_argument('--disable-gpu')
-                    options.add_experimental_option('detach', True)  # Keep browser open
-                    options.add_experimental_option('excludeSwitches', ['enable-automation'])
-                    options.add_experimental_option('useAutomationExtension', False)
-
-                # Use the Service class to specify the chromedriver path if needed
-                # Uncomment and modify the line below if you need to specify a custom path
-                # service = Service('/path/to/chromedriver')
-
-                # Try different approaches to initialize the Chrome driver
-                try:
-                    # First try: Use webdriver_manager to get the correct driver
-                    try:
-                        from selenium.webdriver.chrome.service import Service as ChromeService
-                        from webdriver_manager.chrome import ChromeDriverManager
-                        service = ChromeService(ChromeDriverManager().install())
-                        self.driver = webdriver.Chrome(service=service, options=options)
-                        logger.debug("Initialized Chrome WebDriver using webdriver_manager")
-                    except ImportError:
-                        # Second try: Use the default approach
-                        self.driver = webdriver.Chrome(options=options)
-                        logger.debug("Initialized Chrome WebDriver using default approach")
-                except Exception as e:
-                    logger.warning(f"Standard initialization failed: {e}")
-                    # Third try: Try with specific ChromeDriver version
-                    try:
-                        # Try to use a specific version that might be compatible
-                        from selenium.webdriver.chrome.service import Service as ChromeService
-                        self.driver = webdriver.Chrome(options=options)
-                        logger.debug("Initialized Chrome WebDriver with specific version")
-                    except Exception as e2:
-                        logger.error(f"All Chrome initialization methods failed: {e2}")
-                        raise
-
-                self.driver.set_window_size(1366, 768)
+                # Use the undetected-chromedriver for better compatibility with Render
+                self.driver = create_driver(headless=self.headless)
                 self.driver.implicitly_wait(10)  # Wait up to 10 seconds for elements to appear
-                logger.info("Initialized Chrome WebDriver")
+                logger.info("Initialized Chrome WebDriver using undetected-chromedriver")
             except Exception as e:
                 logger.error(f"Error initializing Chrome WebDriver: {e}")
                 self.driver = None
         else:
-            logger.warning("Selenium is not available. Using requests-based scraping only.")
+            logger.warning("Selenium or Selenium login utilities are not available. Using requests-based scraping only.")
 
     def __del__(self):
         """Clean up resources when the object is destroyed."""
@@ -237,47 +202,20 @@ class AttendanceScraper:
             return True
 
         # Try to authenticate using Selenium if available
-        if self.driver:
+        if self.driver and SELENIUM_LOGIN_AVAILABLE:
             try:
-                logger.info("Authenticating using Selenium...")
-                # Go directly to the attendance portal URL which will redirect to login page
-                self.driver.get(ATTENDANCE_PORTAL_URL)
-
-                # Wait for the login form to load
-                WebDriverWait(self.driver, self.timeout).until(
-                    EC.presence_of_element_located((By.NAME, "username"))
-                )
-
-                # Log the current URL to verify we're on the login page
-                logger.debug(f"Current URL after navigation: {self.driver.current_url}")
-
-                # Fill in the login form
-                username_field = self.driver.find_element(By.NAME, "username")
-                password_field = self.driver.find_element(By.NAME, "password")
-
-                username_field.clear()
-                password_field.clear()
-
-                username_field.send_keys(self.username)
-                password_field.send_keys(self.password)
-
-                # Submit the form
-                password_field.submit()
-
-                # Wait for the page to load
-                time.sleep(2)
-
-                # Check if login was successful
-                if "login" not in self.driver.current_url.lower():
+                logger.info("Authenticating using undetected-chromedriver...")
+                # Use the selenium_login function from selenium_login_utils
+                success, error_msg = selenium_login(self.driver, self.username, self.password)
+                if success:
                     self.logged_in = True
-                    logger.info("Login successful using Selenium")
+                    logger.info("Login successful using undetected-chromedriver")
                     return True
                 else:
-                    logger.error("Login failed using Selenium")
-                    return False
-
+                    logger.error(f"Login failed using undetected-chromedriver: {error_msg}")
+                    # Fall back to requests-based authentication
             except Exception as e:
-                logger.error(f"Error authenticating using Selenium: {e}")
+                logger.error(f"Error authenticating using undetected-chromedriver: {e}")
                 # Fall back to requests-based authentication
 
         # Use requests-based authentication as fallback

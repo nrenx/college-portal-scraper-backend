@@ -35,7 +35,7 @@ def run_scraper(
     password: str,
     academic_year: str,
     headless: bool = True,
-    workers: int = 16,
+    workers: int = 2,  # Further reduced from 4 to 2 for Render free tier
     worker_mode: str = "thread",
     delay: float = 1.0,
     max_retries: int = 3
@@ -90,7 +90,8 @@ def run_scraper(
             "--workers", str(workers),
             "--worker-mode", worker_mode,
             "--delay", str(delay),
-            "--no-csv"  # Disable CSV generation to save time
+            "--no-csv",  # Disable CSV generation to save time
+            "--headless"  # Always use headless mode on Render
         ]
     else:
         # Use full command for other scrapers
@@ -104,11 +105,9 @@ def run_scraper(
             "--worker-mode", worker_mode,
             "--delay", str(delay),
             "--max-retries", str(max_retries),
-            "--no-csv"  # Disable CSV generation to save time
+            "--no-csv",  # Disable CSV generation to save time
+            "--headless"  # Always use headless mode on Render
         ]
-
-    if headless:
-        cmd.append("--headless")
 
     # Run the command
     logger.info(f"Running command: {' '.join(cmd)}")

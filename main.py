@@ -215,7 +215,9 @@ async def process_scrape_job(
                 "attendance",
                 username,
                 password,
-                academic_year
+                academic_year,
+                workers=2,  # Further reduced from 4 to 2 for Render free tier
+                worker_mode="thread"
             )
             scrape_results["attendance"] = attendance_result
             job_status[job_id]["progress"] = 0.3
@@ -248,7 +250,9 @@ async def process_scrape_job(
                 "mid_marks",
                 username,
                 password,
-                academic_year
+                academic_year,
+                workers=2,  # Further reduced from 4 to 2 for Render free tier
+                worker_mode="thread"
             )
             scrape_results["mid_marks"] = mid_marks_result
             job_status[job_id]["progress"] = 0.5
@@ -281,7 +285,9 @@ async def process_scrape_job(
                 "personal_details",
                 username,
                 password,
-                academic_year
+                academic_year,
+                workers=2,  # Further reduced from 4 to 2 for Render free tier
+                worker_mode="thread"
             )
             scrape_results["personal_details"] = personal_details_result
             job_status[job_id]["progress"] = 0.7
