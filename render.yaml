@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: college-portal-scraper-backend
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn -k uvicorn.workers.UvicornWorker -w 4 -b 0.0.0.0:$PORT main:app
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.9.0
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false
+      - key: SUPABASE_BUCKET
+        value: demo-usingfastapi
+      - key: API_USERNAME
+        sync: false
+      - key: API_PASSWORD
+        sync: false
+    healthCheckPath: /health
+    autoDeploy: true
