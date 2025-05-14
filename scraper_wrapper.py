@@ -113,11 +113,13 @@ def run_scraper(
     logger.info(f"Running command: {' '.join(cmd)}")
 
     try:
+        # Use a timeout to prevent hanging processes
         result = subprocess.run(
             cmd,
             capture_output=True,
             text=True,
-            check=True
+            check=True,
+            timeout=300  # 5 minute timeout
         )
 
         logger.info(f"{scraper_type} scraper completed successfully")
@@ -149,6 +151,14 @@ def run_scraper(
             "stderr": result.stderr
         }
 
+    except subprocess.TimeoutExpired as e:
+        logger.error(f"Timeout running {scraper_type} scraper: Process took too long and was terminated")
+        return {
+            "success": False,
+            "message": f"Timeout running {scraper_type} scraper: Process took too long and was terminated",
+            "stdout": e.stdout if hasattr(e, 'stdout') else "",
+            "stderr": e.stderr if hasattr(e, 'stderr') else ""
+        }
     except subprocess.CalledProcessError as e:
         error_message = f"Error running {scraper_type} scraper: {e}"
 
@@ -290,7 +300,8 @@ DEFAULT_SETTINGS = {{
             cmd,
             capture_output=True,
             text=True,
-            check=True
+            check=True,
+            timeout=300  # 5 minute timeout
         )
 
         logger.info("Supabase uploader completed successfully")
@@ -316,6 +327,14 @@ DEFAULT_SETTINGS = {{
             "stderr": result.stderr
         }
 
+    except subprocess.TimeoutExpired as e:
+        logger.error(f"Timeout running Supabase uploader: Process took too long and was terminated")
+        return {
+            "success": False,
+            "message": f"Timeout running Supabase uploader: Process took too long and was terminated",
+            "stdout": e.stdout if hasattr(e, 'stdout') else "",
+            "stderr": e.stderr if hasattr(e, 'stderr') else ""
+        }
     except subprocess.CalledProcessError as e:
         logger.error(f"Error running Supabase uploader: {e}")
         return {

@@ -200,6 +200,23 @@ async def process_scrape_job(
     """
     Process a scraping job in the background
     """
+    # Initialize job status if it doesn't exist (in case of worker restart)
+    if job_id not in job_status:
+        job_status[job_id] = {
+            "status": "queued",
+            "message": "Job queued for processing",
+            "start_time": datetime.now().isoformat(),
+            "progress": 0.0,
+            "details": {
+                "username": username,
+                "academic_year": academic_year,
+                "scrape_attendance": scrape_attendance,
+                "scrape_mid_marks": scrape_mid_marks,
+                "scrape_personal_details": scrape_personal_details,
+                "upload_to_supabase": upload_to_supabase,
+                "force_update": force_update
+            }
+        }
     try:
         # Update job status
         job_status[job_id]["status"] = "running"
