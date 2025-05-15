@@ -115,11 +115,31 @@ def check_chrome_installation() -> Dict[str, Any]:
     # Use the chrome_config module to get Chrome information
     chrome_config = get_chrome_config()
 
+    # Try to get Chrome version directly
+    chrome_path = chrome_config.get("chrome_path")
+    chrome_version = None
+    chrome_version_error = None
+
+    if chrome_path:
+        try:
+            result = subprocess.run([chrome_path, "--version"], capture_output=True, text=True, timeout=5)
+            if result.returncode == 0:
+                chrome_version = result.stdout.strip()
+                logger.info(f"Chrome version: {chrome_version}")
+            else:
+                chrome_version_error = result.stderr
+                logger.error(f"Error getting Chrome version: {chrome_version_error}")
+        except Exception as e:
+            chrome_version_error = str(e)
+            logger.error(f"Exception getting Chrome version: {e}")
+
     return {
         "installed": chrome_config.get("chrome_found", False),
         "path": chrome_config.get("chrome_path"),
-        "version": chrome_config.get("chrome_version"),
-        "config": chrome_config
+        "version": chrome_version or chrome_config.get("chrome_version"),
+        "version_error": chrome_version_error,
+        "config": chrome_config,
+        "environment_variable": os.environ.get("CHROME_PATH")
     }
 
 def check_chromedriver_installation() -> Dict[str, Any]:
@@ -129,10 +149,30 @@ def check_chromedriver_installation() -> Dict[str, Any]:
     # Use the chrome_config module to get ChromeDriver information
     chrome_config = get_chrome_config()
 
+    # Try to get ChromeDriver version directly
+    chromedriver_path = chrome_config.get("chromedriver_path")
+    chromedriver_version = None
+    chromedriver_version_error = None
+
+    if chromedriver_path:
+        try:
+            result = subprocess.run([chromedriver_path, "--version"], capture_output=True, text=True, timeout=5)
+            if result.returncode == 0:
+                chromedriver_version = result.stdout.strip()
+                logger.info(f"ChromeDriver version: {chromedriver_version}")
+            else:
+                chromedriver_version_error = result.stderr
+                logger.error(f"Error getting ChromeDriver version: {chromedriver_version_error}")
+        except Exception as e:
+            chromedriver_version_error = str(e)
+            logger.error(f"Exception getting ChromeDriver version: {e}")
+
     return {
         "installed": chrome_config.get("chromedriver_found", False),
         "path": chrome_config.get("chromedriver_path"),
-        "version": chrome_config.get("chromedriver_version")
+        "version": chromedriver_version or chrome_config.get("chromedriver_version"),
+        "version_error": chromedriver_version_error,
+        "environment_variable": os.environ.get("CHROMEDRIVER_PATH")
     }
 
 def check_file_permissions() -> Dict[str, Any]:

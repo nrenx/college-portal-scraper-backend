@@ -232,6 +232,36 @@ def debug_system_check(username: str = Depends(get_current_username)):
             "timestamp": datetime.now().isoformat()
         }
 
+@app.get("/debug/test-chrome")
+def debug_test_chrome(username: str = Depends(get_current_username)):
+    """Debug endpoint to test Chrome and Selenium"""
+    logger.info(f"Debug test-chrome endpoint accessed by {username}")
+
+    try:
+        # Import the test_chrome module
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("test_chrome", "test_chrome.py")
+        test_chrome = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(test_chrome)
+
+        # Run the tests
+        test_results = test_chrome.run_all_tests()
+
+        # Add timestamp
+        test_results["timestamp"] = datetime.now().isoformat()
+
+        return test_results
+    except Exception as e:
+        import traceback
+        logger.error(f"Error testing Chrome: {str(e)}")
+        logger.error(traceback.format_exc())
+        return {
+            "success": False,
+            "error": str(e),
+            "traceback": traceback.format_exc(),
+            "timestamp": datetime.now().isoformat()
+        }
+
 @app.post("/scrape", response_model=ScrapeResponse)
 async def scrape_data(
     request: ScrapeRequest,
