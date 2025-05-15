@@ -35,10 +35,10 @@ def run_scraper(
     password: str,
     academic_year: str,
     headless: bool = True,
-    workers: int = 2,  # Further reduced from 4 to 2 for Render free tier
+    workers: int = 3,  # Increased to 3 workers as requested
     worker_mode: str = "thread",
-    delay: float = 1.0,
-    max_retries: int = 3
+    delay: float = 2.0,  # Keeping increased delay to reduce load
+    max_retries: int = None  # Removed max retries as requested
 ) -> Dict[str, Any]:
     """
     Run a scraper with the specified parameters.
@@ -79,47 +79,40 @@ def run_scraper(
         raise FileNotFoundError(f"Scraper script not found: {script_path}")
 
     # Build the command
-    if scraper_type == "personal_details":
-        # Use modified command for personal_details_scraper (without --max-retries)
-        cmd = [
-            sys.executable,
-            str(script_path),
-            "--username", username,
-            "--password", password,
-            "--academic-year", academic_year,
-            "--workers", str(workers),
-            "--worker-mode", worker_mode,
-            "--delay", str(delay),
-            "--no-csv",  # Disable CSV generation to save time
-            "--headless"  # Always use headless mode on Render
-        ]
-    else:
-        # Use full command for other scrapers
-        cmd = [
-            sys.executable,
-            str(script_path),
-            "--username", username,
-            "--password", password,
-            "--academic-year", academic_year,
-            "--workers", str(workers),
-            "--worker-mode", worker_mode,
-            "--delay", str(delay),
-            "--max-retries", str(max_retries),
-            "--no-csv",  # Disable CSV generation to save time
-            "--headless"  # Always use headless mode on Render
-        ]
+    # Base command for all scrapers
+    cmd = [
+        sys.executable,
+        str(script_path),
+        "--username", username,
+        "--password", password,
+        "--academic-year", academic_year,
+        "--workers", str(workers),
+        "--worker-mode", worker_mode,
+        "--delay", str(delay),
+        "--no-csv",  # Disable CSV generation to save time
+        "--headless"  # Always use headless mode on Render
+    ]
 
-    # Run the command
-    logger.info(f"Running command: {' '.join(cmd)}")
+    # Add max-retries parameter only if it's specified
+    if max_retries is not None and scraper_type != "personal_details":
+        cmd.extend(["--max-retries", str(max_retries)])
+
+    # Log the full command for debugging
+    logger.info(f"Built command for {scraper_type} scraper with {workers} workers and delay={delay}")
+    # Log a sanitized version of the command (without password)
+    sanitized_cmd = cmd.copy()
+    password_index = sanitized_cmd.index("--password") + 1
+    sanitized_cmd[password_index] = "********"
+    logger.info(f"Running command: {' '.join(sanitized_cmd)}")
 
     try:
-        # Use a timeout to prevent hanging processes
+        # Use a shorter timeout to prevent hanging processes on Render free tier
         result = subprocess.run(
             cmd,
             capture_output=True,
             text=True,
             check=True,
-            timeout=300  # 5 minute timeout
+            timeout=180  # 3 minute timeout (reduced from 5 minutes)
         )
 
         logger.info(f"{scraper_type} scraper completed successfully")
@@ -152,19 +145,37 @@ def run_scraper(
         }
 
     except subprocess.TimeoutExpired as e:
-        logger.error(f"Timeout running {scraper_type} scraper: Process took too long and was terminated")
+        error_message = f"Timeout running {scraper_type} scraper: Process took too long and was terminated after {180} seconds"
+        logger.error(error_message)
+
+        # Log any available output
+        stdout = e.stdout.decode('utf-8', errors='replace') if hasattr(e, 'stdout') and e.stdout else ""
+        stderr = e.stderr.decode('utf-8', errors='replace') if hasattr(e, 'stderr') and e.stderr else ""
+
+        if stdout:
+            logger.error(f"Last stdout output before timeout:\n{stdout[-1000:] if len(stdout) > 1000 else stdout}")
+        if stderr:
+            logger.error(f"Last stderr output before timeout:\n{stderr[-1000:] if len(stderr) > 1000 else stderr}")
+
         return {
             "success": False,
-            "message": f"Timeout running {scraper_type} scraper: Process took too long and was terminated",
-            "stdout": e.stdout if hasattr(e, 'stdout') else "",
-            "stderr": e.stderr if hasattr(e, 'stderr') else ""
+            "message": error_message,
+            "stdout": stdout,
+            "stderr": stderr
         }
     except subprocess.CalledProcessError as e:
         error_message = f"Error running {scraper_type} scraper: {e}"
+        logger.error(error_message)
 
-        # Check for common error patterns in the output
-        stderr = e.stderr or ""
-        stdout = e.stdout or ""
+        # Convert bytes to string with error handling
+        stderr = e.stderr.decode('utf-8', errors='replace') if e.stderr else ""
+        stdout = e.stdout.decode('utf-8', errors='replace') if e.stdout else ""
+
+        # Log the output for debugging
+        if stdout:
+            logger.error(f"Process stdout:\n{stdout[-1000:] if len(stdout) > 1000 else stdout}")
+        if stderr:
+            logger.error(f"Process stderr:\n{stderr[-1000:] if len(stderr) > 1000 else stderr}")
 
         # Special handling for personal_details scraper
         # Even if it returns a non-zero exit code, check if it completed successfully
@@ -198,27 +209,74 @@ def run_scraper(
                 "stderr": stderr
             }
 
-        # Normal error handling for other scrapers
-        if "exit status 1" in stderr:
-            if "Login failed" in stderr or "Authentication failed" in stderr or "Login failed" in stdout or "Authentication failed" in stdout:
-                error_message = f"Authentication failed for {scraper_type} scraper. Please check your credentials."
-            elif "Connection refused" in stderr or "Failed to establish a new connection" in stderr:
-                error_message = f"Connection error in {scraper_type} scraper. The college portal may be down or unreachable."
-            elif "Timeout" in stderr:
-                error_message = f"Timeout error in {scraper_type} scraper. The college portal is responding slowly."
+        # Check for specific error patterns
+        error_details = ""
 
-        logger.error(error_message)
+        # Check for Selenium/ChromeDriver errors
+        if "selenium.common.exceptions" in stderr or "selenium.common.exceptions" in stdout:
+            if "WebDriverException" in stderr or "WebDriverException" in stdout:
+                error_details = "WebDriver error. Chrome or ChromeDriver might not be installed correctly."
+            elif "NoSuchElementException" in stderr or "NoSuchElementException" in stdout:
+                error_details = "Element not found on page. The college portal structure might have changed."
+            elif "TimeoutException" in stderr or "TimeoutException" in stdout:
+                error_details = "Timeout waiting for element. The college portal is responding slowly."
+
+        # Check for authentication errors
+        elif "Login failed" in stderr or "Authentication failed" in stderr or "Login failed" in stdout or "Authentication failed" in stdout:
+            error_details = "Authentication failed. Please check your credentials."
+
+        # Check for connection errors
+        elif "Connection refused" in stderr or "Failed to establish a new connection" in stderr:
+            error_details = "Connection error. The college portal may be down or unreachable."
+
+        # Check for timeout errors
+        elif "Timeout" in stderr or "timed out" in stderr:
+            error_details = "Timeout error. The college portal is responding slowly."
+
+        # Check for file not found errors
+        elif "No such file or directory" in stderr:
+            error_details = "File not found error. Required files might be missing."
+
+        # Check for permission errors
+        elif "Permission denied" in stderr:
+            error_details = "Permission denied. Check file permissions."
+
+        # Update error message with details if available
+        if error_details:
+            error_message = f"{error_message} - {error_details}"
+
+        logger.error(f"Final error diagnosis: {error_message}")
         return {
             "success": False,
             "message": error_message,
-            "stdout": e.stdout,
-            "stderr": e.stderr
+            "stdout": stdout,
+            "stderr": stderr
         }
     except Exception as e:
-        logger.error(f"Unexpected error running {scraper_type} scraper: {e}")
+        import traceback
+        error_message = f"Unexpected error running {scraper_type} scraper: {e}"
+        logger.error(error_message)
+
+        # Get the full traceback for debugging
+        tb = traceback.format_exc()
+        logger.error(f"Traceback:\n{tb}")
+
+        # Try to provide more specific error information
+        if "chrome not reachable" in str(e).lower():
+            error_message = f"{error_message} - Chrome browser crashed or is not available. Check Chrome installation."
+        elif "chromedriver" in str(e).lower():
+            error_message = f"{error_message} - ChromeDriver issue. Check if ChromeDriver is installed and compatible with Chrome."
+        elif "selenium" in str(e).lower():
+            error_message = f"{error_message} - Selenium issue. Check Selenium installation."
+        elif "permission" in str(e).lower():
+            error_message = f"{error_message} - Permission issue. Check file permissions."
+        elif "file" in str(e).lower() and "not found" in str(e).lower():
+            error_message = f"{error_message} - File not found. Check if required files exist."
+
         return {
             "success": False,
-            "message": f"Unexpected error running {scraper_type} scraper: {e}"
+            "message": error_message,
+            "traceback": tb
         }
 
 def run_uploader(
@@ -328,24 +386,83 @@ DEFAULT_SETTINGS = {{
         }
 
     except subprocess.TimeoutExpired as e:
-        logger.error(f"Timeout running Supabase uploader: Process took too long and was terminated")
+        error_message = f"Timeout running Supabase uploader: Process took too long and was terminated after {300} seconds"
+        logger.error(error_message)
+
+        # Log any available output
+        stdout = e.stdout.decode('utf-8', errors='replace') if hasattr(e, 'stdout') and e.stdout else ""
+        stderr = e.stderr.decode('utf-8', errors='replace') if hasattr(e, 'stderr') and e.stderr else ""
+
+        if stdout:
+            logger.error(f"Last stdout output before timeout:\n{stdout[-1000:] if len(stdout) > 1000 else stdout}")
+        if stderr:
+            logger.error(f"Last stderr output before timeout:\n{stderr[-1000:] if len(stderr) > 1000 else stderr}")
+
         return {
             "success": False,
-            "message": f"Timeout running Supabase uploader: Process took too long and was terminated",
-            "stdout": e.stdout if hasattr(e, 'stdout') else "",
-            "stderr": e.stderr if hasattr(e, 'stderr') else ""
+            "message": error_message,
+            "stdout": stdout,
+            "stderr": stderr
         }
     except subprocess.CalledProcessError as e:
-        logger.error(f"Error running Supabase uploader: {e}")
+        error_message = f"Error running Supabase uploader: {e}"
+        logger.error(error_message)
+
+        # Convert bytes to string with error handling
+        stderr = e.stderr.decode('utf-8', errors='replace') if e.stderr else ""
+        stdout = e.stdout.decode('utf-8', errors='replace') if e.stdout else ""
+
+        # Log the output for debugging
+        if stdout:
+            logger.error(f"Process stdout:\n{stdout[-1000:] if len(stdout) > 1000 else stdout}")
+        if stderr:
+            logger.error(f"Process stderr:\n{stderr[-1000:] if len(stderr) > 1000 else stderr}")
+
+        # Check for specific error patterns
+        error_details = ""
+
+        if "supabase" in stderr.lower() and "auth" in stderr.lower():
+            error_details = "Supabase authentication error. Check your Supabase URL and API key."
+        elif "bucket" in stderr.lower() and "not found" in stderr.lower():
+            error_details = "Supabase bucket not found. Check if the bucket exists."
+        elif "permission" in stderr.lower() or "access" in stderr.lower():
+            error_details = "Permission denied. Check your Supabase permissions."
+        elif "network" in stderr.lower() or "connection" in stderr.lower():
+            error_details = "Network error. Check your internet connection."
+
+        # Update error message with details if available
+        if error_details:
+            error_message = f"{error_message} - {error_details}"
+
+        logger.error(f"Final error diagnosis: {error_message}")
+
         return {
             "success": False,
-            "message": f"Error running Supabase uploader: {e}",
-            "stdout": e.stdout,
-            "stderr": e.stderr
+            "message": error_message,
+            "stdout": stdout,
+            "stderr": stderr
         }
     except Exception as e:
-        logger.error(f"Unexpected error running Supabase uploader: {e}")
+        import traceback
+        error_message = f"Unexpected error running Supabase uploader: {e}"
+        logger.error(error_message)
+
+        # Get the full traceback for debugging
+        tb = traceback.format_exc()
+        logger.error(f"Traceback:\n{tb}")
+
+        # Try to provide more specific error information
+        if "supabase" in str(e).lower():
+            error_message = f"{error_message} - Supabase client error. Check Supabase configuration."
+        elif "permission" in str(e).lower():
+            error_message = f"{error_message} - Permission issue. Check file permissions."
+        elif "file" in str(e).lower() and "not found" in str(e).lower():
+            error_message = f"{error_message} - File not found. Check if required files exist."
+        elif "network" in str(e).lower() or "connection" in str(e).lower():
+            error_message = f"{error_message} - Network error. Check your internet connection."
+
         return {
             "success": False,
-            "message": f"Unexpected error running Supabase uploader: {e}"
+            "message": error_message,
+            "traceback": tb
         }

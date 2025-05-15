@@ -16,6 +16,12 @@ from datetime import datetime
 # Import job storage module
 from job_storage import save_job, load_job, list_jobs
 
+# Import job monitor module
+from job_monitor import check_for_stalled_jobs
+
+# Import system check module
+from system_check import run_system_check
+
 # Add parent directory to path to import scraper modules
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -184,6 +190,48 @@ def debug_list_jobs(username: str = Depends(get_current_username)):
         "timestamp": datetime.now().isoformat()
     }
 
+@app.get("/debug/check-stalled-jobs")
+def debug_check_stalled_jobs(username: str = Depends(get_current_username)):
+    """Debug endpoint to check for stalled jobs"""
+    logger.info(f"Debug check-stalled-jobs endpoint accessed by {username}")
+
+    try:
+        stalled_jobs = check_for_stalled_jobs()
+        return {
+            "success": True,
+            "stalled_jobs": stalled_jobs,
+            "count": len(stalled_jobs),
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Error checking for stalled jobs: {str(e)}")
+        return {
+            "success": False,
+            "error": str(e),
+            "timestamp": datetime.now().isoformat()
+        }
+
+@app.get("/debug/system-check")
+def debug_system_check(username: str = Depends(get_current_username)):
+    """Debug endpoint to check system configuration and dependencies"""
+    logger.info(f"Debug system-check endpoint accessed by {username}")
+
+    try:
+        # Run the system check
+        check_results = run_system_check()
+
+        # Add timestamp
+        check_results["timestamp"] = datetime.now().isoformat()
+
+        return check_results
+    except Exception as e:
+        logger.error(f"Error running system check: {str(e)}")
+        return {
+            "success": False,
+            "error": str(e),
+            "timestamp": datetime.now().isoformat()
+        }
+
 @app.post("/scrape", response_model=ScrapeResponse)
 async def scrape_data(
     request: ScrapeRequest,
@@ -250,6 +298,15 @@ async def get_job_status(job_id: str, username: str = Depends(get_current_userna
     Get the status of a scraping job
     """
     logger.info(f"Job status endpoint accessed for job_id={job_id} by {username}")
+
+    # Check for stalled jobs before returning status
+    # This ensures we don't keep showing "running" for jobs that have stalled
+    try:
+        stalled_jobs = check_for_stalled_jobs()
+        if stalled_jobs:
+            logger.info(f"Found and marked {len(stalled_jobs)} stalled jobs")
+    except Exception as e:
+        logger.error(f"Error checking for stalled jobs: {str(e)}")
 
     # Check if job is in memory
     if job_id not in job_status:
@@ -439,8 +496,20 @@ async def process_scrape_job(
         job_status[job_id]["details"]["results"] = scrape_results
         job_status[job_id]["end_time"] = datetime.now().isoformat()
 
+        # Check for authentication failures
+        auth_failure = False
+        for result in scrape_results.values():
+            if not result.get("success", False) and "Authentication failed" in result.get("message", ""):
+                auth_failure = True
+                break
+
+        if auth_failure:
+            # Special handling for authentication failures
+            job_status[job_id]["status"] = "failed"
+            job_status[job_id]["message"] = "Authentication failed. Please check your credentials."
+            logger.warning(f"Job {job_id} failed due to authentication error")
         # Check if any scraper was successful
-        if any(result.get("success", False) for result in scrape_results.values()):
+        elif any(result.get("success", False) for result in scrape_results.values()):
             job_status[job_id]["status"] = "completed"
 
             # Count successful and failed scrapers
