@@ -528,7 +528,14 @@ async def process_scrape_job(
         save_job(job_id, job_status[job_id])
 
     except Exception as e:
-        logger.error(f"Error processing job {job_id}: {str(e)}")
+        import traceback
+        error_message = f"Error processing job {job_id}: {str(e)}"
+        logger.error(error_message)
+
+        # Get the full traceback for debugging
+        tb = traceback.format_exc()
+        logger.error(f"Traceback:\n{tb}")
+
         job_status[job_id]["status"] = "failed"
         job_status[job_id]["message"] = f"Error: {str(e)}"
         job_status[job_id]["end_time"] = datetime.now().isoformat()

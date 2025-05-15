@@ -149,8 +149,16 @@ def run_scraper(
         logger.error(error_message)
 
         # Log any available output
-        stdout = e.stdout.decode('utf-8', errors='replace') if hasattr(e, 'stdout') and e.stdout else ""
-        stderr = e.stderr.decode('utf-8', errors='replace') if hasattr(e, 'stderr') and e.stderr else ""
+        # Handle both cases: bytes and strings
+        if hasattr(e, 'stdout') and e.stdout:
+            stdout = e.stdout.decode('utf-8', errors='replace') if isinstance(e.stdout, bytes) else e.stdout
+        else:
+            stdout = ""
+
+        if hasattr(e, 'stderr') and e.stderr:
+            stderr = e.stderr.decode('utf-8', errors='replace') if isinstance(e.stderr, bytes) else e.stderr
+        else:
+            stderr = ""
 
         if stdout:
             logger.error(f"Last stdout output before timeout:\n{stdout[-1000:] if len(stdout) > 1000 else stdout}")
@@ -168,8 +176,16 @@ def run_scraper(
         logger.error(error_message)
 
         # Convert bytes to string with error handling
-        stderr = e.stderr.decode('utf-8', errors='replace') if e.stderr else ""
-        stdout = e.stdout.decode('utf-8', errors='replace') if e.stdout else ""
+        # Handle both cases: bytes and strings
+        if e.stderr:
+            stderr = e.stderr.decode('utf-8', errors='replace') if isinstance(e.stderr, bytes) else e.stderr
+        else:
+            stderr = ""
+
+        if e.stdout:
+            stdout = e.stdout.decode('utf-8', errors='replace') if isinstance(e.stdout, bytes) else e.stdout
+        else:
+            stdout = ""
 
         # Log the output for debugging
         if stdout:
@@ -390,8 +406,16 @@ DEFAULT_SETTINGS = {{
         logger.error(error_message)
 
         # Log any available output
-        stdout = e.stdout.decode('utf-8', errors='replace') if hasattr(e, 'stdout') and e.stdout else ""
-        stderr = e.stderr.decode('utf-8', errors='replace') if hasattr(e, 'stderr') and e.stderr else ""
+        # Handle both cases: bytes and strings
+        if hasattr(e, 'stdout') and e.stdout:
+            stdout = e.stdout.decode('utf-8', errors='replace') if isinstance(e.stdout, bytes) else e.stdout
+        else:
+            stdout = ""
+
+        if hasattr(e, 'stderr') and e.stderr:
+            stderr = e.stderr.decode('utf-8', errors='replace') if isinstance(e.stderr, bytes) else e.stderr
+        else:
+            stderr = ""
 
         if stdout:
             logger.error(f"Last stdout output before timeout:\n{stdout[-1000:] if len(stdout) > 1000 else stdout}")
@@ -409,8 +433,16 @@ DEFAULT_SETTINGS = {{
         logger.error(error_message)
 
         # Convert bytes to string with error handling
-        stderr = e.stderr.decode('utf-8', errors='replace') if e.stderr else ""
-        stdout = e.stdout.decode('utf-8', errors='replace') if e.stdout else ""
+        # Handle both cases: bytes and strings
+        if e.stderr:
+            stderr = e.stderr.decode('utf-8', errors='replace') if isinstance(e.stderr, bytes) else e.stderr
+        else:
+            stderr = ""
+
+        if e.stdout:
+            stdout = e.stdout.decode('utf-8', errors='replace') if isinstance(e.stdout, bytes) else e.stdout
+        else:
+            stdout = ""
 
         # Log the output for debugging
         if stdout:
