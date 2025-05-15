@@ -27,4 +27,4 @@ ENV CHROMEDRIVER_PATH=/usr/bin/chromedriver
 EXPOSE 8000
 
 # Command to run the application
-CMD ["gunicorn", "-k", "uvicorn.workers.UvicornWorker", "-w", "1", "-b", "0.0.0.0:$PORT", "--timeout", "600", "main:app"]
+CMD gunicorn -k uvicorn.workers.UvicornWorker -w 3 -b 0.0.0.0:${PORT:-8000} --timeout 600 main:app
