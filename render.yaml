@@ -4,20 +4,16 @@ services:
     env: python
     plan: free
     buildCommand: |
-      # Install system dependencies for Playwright
-      apt-get update && apt-get install -y wget gnupg2 unzip libglib2.0-0 libnss3 libnspr4 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libgbm1 libasound2 libpango-1.0-0 libpangocairo-1.0-0 libcairo2 libatspi2.0-0
-
       # Install Python dependencies
       pip install -r requirements.txt
 
-      # Install Playwright browsers
-      playwright install chromium
+      # Install Playwright and browsers
+      chmod +x install_playwright.sh && ./install_playwright.sh
 
-      # Run setup and debug scripts
-      chmod +x setup_chrome.sh && ./setup_chrome.sh
+      # Run debug scripts
+      chmod +x test_playwright.py && python test_playwright.py
       chmod +x find_chrome.py && python find_chrome.py
       chmod +x debug_chrome.py && python debug_chrome.py
-      chmod +x test_playwright.py && python test_playwright.py
     startCommand: gunicorn -k uvicorn.workers.UvicornWorker -w 4 -b 0.0.0.0:$PORT --timeout 300 main:app
     envVars:
       - key: PYTHON_VERSION
