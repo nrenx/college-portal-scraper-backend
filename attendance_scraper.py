@@ -54,6 +54,20 @@ try:
 except ImportError:
     SELENIUM_LOGIN_AVAILABLE = False
     print("Warning: Selenium login utilities are not available. Using standard login.")
+# Import Playwright login utilities
+try:
+    from playwright_login_utils import (
+        is_playwright_available, create_browser, close_browser,
+        playwright_login, playwright_login_to_attendance
+    )
+    PLAYWRIGHT_AVAILABLE = is_playwright_available()
+    if PLAYWRIGHT_AVAILABLE:
+        print("Playwright is available and will be used for browser automation.")
+    else:
+        print("Playwright is installed but not properly configured.")
+except ImportError:
+    PLAYWRIGHT_AVAILABLE = False
+    print("Warning: Playwright login utilities are not available. Using other methods.")
 from config import (
     USERNAME, PASSWORD, ATTENDANCE_PORTAL_URL,
     DEFAULT_ACADEMIC_YEARS, DEFAULT_SEMESTERS,
@@ -168,8 +182,29 @@ class AttendanceScraper:
         else:
             logger.info("Initialized attendance scraper in interactive mode")
 
-        # Initialize Selenium WebDriver if available
-        if SELENIUM_AVAILABLE and SELENIUM_LOGIN_AVAILABLE:
+        # Initialize browser automation
+        self.driver = None
+        self.playwright = None
+        self.browser = None
+        self.context = None
+        self.page = None
+
+        # Try Playwright first (preferred method)
+        if PLAYWRIGHT_AVAILABLE:
+            try:
+                self.playwright, self.browser, self.context = create_browser(headless=self.headless)
+                if self.browser and self.context:
+                    logger.info("Initialized Playwright browser")
+                else:
+                    logger.error("Failed to initialize Playwright browser")
+            except Exception as e:
+                logger.error(f"Error initializing Playwright browser: {e}")
+                self.playwright = None
+                self.browser = None
+                self.context = None
+
+        # Fall back to Selenium if Playwright is not available
+        if not self.browser and SELENIUM_AVAILABLE and SELENIUM_LOGIN_AVAILABLE:
             try:
                 # Use the undetected-chromedriver for better compatibility with Render
                 self.driver = create_driver(headless=self.headless)
@@ -178,17 +213,28 @@ class AttendanceScraper:
             except Exception as e:
                 logger.error(f"Error initializing Chrome WebDriver: {e}")
                 self.driver = None
-        else:
-            logger.warning("Selenium or Selenium login utilities are not available. Using requests-based scraping only.")
+
+        # If neither browser automation method is available, use requests-based scraping only
+        if not self.browser and not self.driver:
+            logger.warning("Browser automation is not available. Using requests-based scraping only.")
 
     def __del__(self):
         """Clean up resources when the object is destroyed."""
+        # Clean up Selenium
         if self.driver:
             try:
                 self.driver.quit()
                 logger.debug("Chrome WebDriver closed")
             except Exception as e:
                 logger.error(f"Error closing Chrome WebDriver: {e}")
+
+        # Clean up Playwright
+        if self.browser or self.playwright:
+            try:
+                close_browser(self.playwright, self.browser)
+                logger.debug("Playwright browser closed")
+            except Exception as e:
+                logger.error(f"Error closing Playwright browser: {e}")
 
     @retry_on_network_error()
     def authenticate(self) -> bool:
@@ -200,6 +246,24 @@ class AttendanceScraper:
         """
         if self.logged_in:
             return True
+
+        # Try to authenticate using Playwright if available
+        if self.context and PLAYWRIGHT_AVAILABLE:
+            try:
+                logger.info("Authenticating using Playwright...")
+                # Use the playwright_login function from playwright_login_utils
+                success, error_msg, page = playwright_login(self.context, self.username, self.password)
+                if success and page:
+                    self.logged_in = True
+                    self.page = page
+                    logger.info("Login successful using Playwright")
+                    return True
+                else:
+                    logger.error(f"Login failed using Playwright: {error_msg}")
+                    # Fall back to next authentication method
+            except Exception as e:
+                logger.error(f"Error authenticating using Playwright: {e}")
+                # Fall back to next authentication method
 
         # Try to authenticate using Selenium if available
         if self.driver and SELENIUM_LOGIN_AVAILABLE:

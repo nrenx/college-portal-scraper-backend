@@ -292,6 +292,36 @@ def debug_find_chrome(username: str = Depends(get_current_username)):
             "timestamp": datetime.now().isoformat()
         }
 
+@app.get("/debug/test-playwright")
+def debug_test_playwright(username: str = Depends(get_current_username)):
+    """Debug endpoint to test Playwright"""
+    logger.info(f"Debug test-playwright endpoint accessed by {username}")
+
+    try:
+        # Import the test_playwright module
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("test_playwright", "test_playwright.py")
+        test_playwright = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(test_playwright)
+
+        # Run the Playwright tests
+        test_results = test_playwright.run_tests()
+
+        # Add timestamp
+        test_results["timestamp"] = datetime.now().isoformat()
+
+        return test_results
+    except Exception as e:
+        import traceback
+        logger.error(f"Error testing Playwright: {str(e)}")
+        logger.error(traceback.format_exc())
+        return {
+            "success": False,
+            "error": str(e),
+            "traceback": traceback.format_exc(),
+            "timestamp": datetime.now().isoformat()
+        }
+
 @app.post("/scrape", response_model=ScrapeResponse)
 async def scrape_data(
     request: ScrapeRequest,
