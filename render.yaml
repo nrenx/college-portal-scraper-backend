@@ -16,6 +16,10 @@ services:
         value: 3.9.0
       - key: PLAYWRIGHT_BROWSERS_PATH
         value: /opt/render/project/browsers
+      - key: CHROME_PATH
+        value: /opt/render/project/browsers/chrome
+      - key: CHROMEDRIVER_PATH
+        value: /opt/render/project/browsers/chromedriver
       - key: SUPABASE_URL
         sync: false
       - key: SUPABASE_KEY
