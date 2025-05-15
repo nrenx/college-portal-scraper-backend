@@ -10,6 +10,8 @@ services:
       # Make scripts executable
       chmod +x install_playwright.sh
       chmod +x install_browsers.py
+      chmod +x download_chromium.py
+      chmod +x simple_browser_test.py
       chmod +x test_playwright.py
       chmod +x find_chrome.py
       chmod +x debug_chrome.py

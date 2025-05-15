@@ -26,12 +26,23 @@ else:
 # Try to install Playwright browsers at startup
 try:
     print("Installing Playwright browsers at startup...")
-    # First try the simple browser test
+
+    # First try to download Chromium directly
+    print("Downloading Chromium directly...")
+    subprocess.run(
+        [sys.executable, "download_chromium.py"],
+        check=False
+    )
+
+    # Then try the simple browser test
+    print("Running simple browser test...")
     subprocess.run(
         [sys.executable, "simple_browser_test.py"],
         check=False
     )
+
     # If that doesn't work, try the more comprehensive installer
+    print("Running comprehensive browser installer...")
     subprocess.run(
         [sys.executable, "install_browsers.py"],
         check=False
@@ -377,6 +388,63 @@ def debug_simple_browser_test(username: str = Depends(get_current_username)):
     except Exception as e:
         import traceback
         logger.error(f"Error running simple browser test: {str(e)}")
+        logger.error(traceback.format_exc())
+        return {
+            "success": False,
+            "error": str(e),
+            "traceback": traceback.format_exc(),
+            "timestamp": datetime.now().isoformat()
+        }
+
+@app.get("/debug/download-chromium")
+def debug_download_chromium(username: str = Depends(get_current_username)):
+    """Debug endpoint to download Chromium directly"""
+    logger.info(f"Debug download-chromium endpoint accessed by {username}")
+
+    try:
+        # Import the download_chromium module
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("download_chromium", "download_chromium.py")
+        download_chromium = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(download_chromium)
+
+        # Download and set up Chromium
+        success = download_chromium.download_and_setup_chromium()
+
+        # Verify installation
+        verification = download_chromium.verify_installation()
+
+        # Check browser paths
+        browser_paths = []
+        browsers_path = os.environ.get("PLAYWRIGHT_BROWSERS_PATH", "/opt/render/project/browsers")
+        if os.path.exists(browsers_path):
+            browser_paths = [os.path.join(browsers_path, d) for d in os.listdir(browsers_path)
+                           if os.path.isdir(os.path.join(browsers_path, d))]
+
+        # Check for headless_shell
+        headless_shell = os.path.join(browsers_path, "chromium_headless_shell-1169", "chrome-linux", "headless_shell")
+        headless_shell_exists = os.path.exists(headless_shell)
+        headless_shell_executable = os.access(headless_shell, os.X_OK) if headless_shell_exists else False
+
+        result = {
+            "success": success,
+            "verification": verification,
+            "browser_paths": browser_paths,
+            "headless_shell_exists": headless_shell_exists,
+            "headless_shell_executable": headless_shell_executable,
+            "headless_shell_path": headless_shell,
+            "environment": {
+                "PLAYWRIGHT_BROWSERS_PATH": os.environ.get("PLAYWRIGHT_BROWSERS_PATH"),
+                "browsers_dir_exists": os.path.exists(browsers_path),
+                "python_path": sys.executable
+            },
+            "timestamp": datetime.now().isoformat()
+        }
+
+        return result
+    except Exception as e:
+        import traceback
+        logger.error(f"Error downloading Chromium: {str(e)}")
         logger.error(traceback.format_exc())
         return {
             "success": False,
