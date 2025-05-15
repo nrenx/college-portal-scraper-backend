@@ -46,10 +46,10 @@ def run_scraper(
     password: str,
     academic_year: str,
     headless: bool = True,
-    workers: int = 3,  # Increased to 3 workers as requested
+    workers: int = 1,  # Reduced to 1 worker to minimize resource usage on Render
     worker_mode: str = "thread",
-    delay: float = 2.0,  # Keeping increased delay to reduce load
-    max_retries: int = None  # Removed max retries as requested
+    delay: float = 3.0,  # Increased delay to reduce load
+    max_retries: int = None  # No max retries as per user preference
 ) -> Dict[str, Any]:
     """
     Run a scraper with the specified parameters.
@@ -318,7 +318,7 @@ def run_scraper(
         }
 
 def run_uploader(
-    workers: int = 32,
+    workers: int = 4,  # Reduced from 32 to minimize resource usage on Render
     force_update: bool = False
 ) -> Dict[str, Any]:
     """

@@ -6,16 +6,7 @@ services:
     buildCommand: |
       # Install Python dependencies
       pip install -r requirements.txt
-
-      # Make scripts executable
-      chmod +x install_playwright.sh
-      chmod +x install_browsers.py
-      chmod +x download_chromium.py
-      chmod +x simple_browser_test.py
-      chmod +x test_playwright.py
-      chmod +x find_chrome.py
-      chmod +x debug_chrome.py
-    startCommand: gunicorn -k uvicorn.workers.UvicornWorker -w 4 -b 0.0.0.0:$PORT --timeout 300 main:app
+    startCommand: gunicorn -k uvicorn.workers.UvicornWorker -w 1 -b 0.0.0.0:$PORT --timeout 600 main:app
     envVars:
       - key: PYTHON_VERSION
         value: 3.9.0

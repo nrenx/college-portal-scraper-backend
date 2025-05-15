@@ -5,10 +5,7 @@ from pydantic import BaseModel, validator
 import os
 import sys
 import logging
-import json
 import re
-import subprocess
-from pathlib import Path
 from typing import Dict, Any, List, Optional
 import secrets
 import time
@@ -23,32 +20,8 @@ if not PLAYWRIGHT_BROWSERS_PATH:
 else:
     print(f"Using existing PLAYWRIGHT_BROWSERS_PATH: {PLAYWRIGHT_BROWSERS_PATH}")
 
-# Try to install Playwright browsers at startup
-try:
-    print("Installing Playwright browsers at startup...")
-
-    # First try to download Chromium directly
-    print("Downloading Chromium directly...")
-    subprocess.run(
-        [sys.executable, "download_chromium.py"],
-        check=False
-    )
-
-    # Then try the simple browser test
-    print("Running simple browser test...")
-    subprocess.run(
-        [sys.executable, "simple_browser_test.py"],
-        check=False
-    )
-
-    # If that doesn't work, try the more comprehensive installer
-    print("Running comprehensive browser installer...")
-    subprocess.run(
-        [sys.executable, "install_browsers.py"],
-        check=False
-    )
-except Exception as e:
-    print(f"Error installing Playwright browsers at startup: {e}")
+# Set Playwright browsers path without running tests
+os.environ["PLAYWRIGHT_BROWSERS_PATH"] = os.environ.get("PLAYWRIGHT_BROWSERS_PATH", "/opt/render/project/browsers")
 
 # Import job storage module
 from job_storage import save_job, load_job, list_jobs
@@ -56,8 +29,7 @@ from job_storage import save_job, load_job, list_jobs
 # Import job monitor module
 from job_monitor import check_for_stalled_jobs
 
-# Import system check module
-from system_check import run_system_check
+# System check module removed to streamline application
 
 # Add parent directory to path to import scraper modules
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -202,353 +174,25 @@ def cors_test():
         "timestamp": datetime.now().isoformat()
     }
 
-@app.get("/debug/jobs")
-def debug_list_jobs(username: str = Depends(get_current_username)):
-    """Debug endpoint to list all jobs"""
-    logger.info(f"Debug jobs endpoint accessed by {username}")
+# Debug endpoint removed to streamline application
 
-    # Get all jobs from storage
-    stored_jobs = list_jobs()
+# Debug endpoint removed to streamline application
 
-    # Get job IDs from memory
-    memory_job_ids = set(job_status.keys())
+# Debug endpoint removed to streamline application
 
-    # Get job IDs from storage
-    storage_job_ids = set(stored_jobs.keys())
+# Debug endpoint removed to streamline application
 
-    return {
-        "memory_jobs": list(memory_job_ids),
-        "storage_jobs": list(storage_job_ids),
-        "total_jobs": len(memory_job_ids.union(storage_job_ids)),
-        "jobs_in_memory_only": list(memory_job_ids - storage_job_ids),
-        "jobs_in_storage_only": list(storage_job_ids - memory_job_ids),
-        "timestamp": datetime.now().isoformat()
-    }
+# Debug endpoint removed to streamline application
 
-@app.get("/debug/check-stalled-jobs")
-def debug_check_stalled_jobs(username: str = Depends(get_current_username)):
-    """Debug endpoint to check for stalled jobs"""
-    logger.info(f"Debug check-stalled-jobs endpoint accessed by {username}")
+# Debug endpoint removed to streamline application
 
-    try:
-        stalled_jobs = check_for_stalled_jobs()
-        return {
-            "success": True,
-            "stalled_jobs": stalled_jobs,
-            "count": len(stalled_jobs),
-            "timestamp": datetime.now().isoformat()
-        }
-    except Exception as e:
-        logger.error(f"Error checking for stalled jobs: {str(e)}")
-        return {
-            "success": False,
-            "error": str(e),
-            "timestamp": datetime.now().isoformat()
-        }
+# Debug endpoint removed to streamline application
 
-@app.get("/debug/system-check")
-def debug_system_check(username: str = Depends(get_current_username)):
-    """Debug endpoint to check system configuration and dependencies"""
-    logger.info(f"Debug system-check endpoint accessed by {username}")
+# Debug endpoint removed to streamline application
 
-    try:
-        # Run the system check
-        check_results = run_system_check()
+# Debug endpoint removed to streamline application
 
-        # Add timestamp
-        check_results["timestamp"] = datetime.now().isoformat()
-
-        return check_results
-    except Exception as e:
-        logger.error(f"Error running system check: {str(e)}")
-        return {
-            "success": False,
-            "error": str(e),
-            "timestamp": datetime.now().isoformat()
-        }
-
-@app.get("/debug/test-chrome")
-def debug_test_chrome(username: str = Depends(get_current_username)):
-    """Debug endpoint to test Chrome and Selenium"""
-    logger.info(f"Debug test-chrome endpoint accessed by {username}")
-
-    try:
-        # Import the test_chrome module
-        import importlib.util
-        spec = importlib.util.spec_from_file_location("test_chrome", "test_chrome.py")
-        test_chrome = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(test_chrome)
-
-        # Run the tests
-        test_results = test_chrome.run_all_tests()
-
-        # Add timestamp
-        test_results["timestamp"] = datetime.now().isoformat()
-
-        return test_results
-    except Exception as e:
-        import traceback
-        logger.error(f"Error testing Chrome: {str(e)}")
-        logger.error(traceback.format_exc())
-        return {
-            "success": False,
-            "error": str(e),
-            "traceback": traceback.format_exc(),
-            "timestamp": datetime.now().isoformat()
-        }
-
-@app.get("/debug/find-chrome")
-def debug_find_chrome(username: str = Depends(get_current_username)):
-    """Debug endpoint to find Chrome and ChromeDriver binaries"""
-    logger.info(f"Debug find-chrome endpoint accessed by {username}")
-
-    try:
-        # Import the find_chrome module
-        import importlib.util
-        spec = importlib.util.spec_from_file_location("find_chrome", "find_chrome.py")
-        find_chrome = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(find_chrome)
-
-        # Run the Chrome finder
-        finder_results = find_chrome.run_find_chrome()
-
-        # Add timestamp
-        finder_results["timestamp"] = datetime.now().isoformat()
-
-        return finder_results
-    except Exception as e:
-        import traceback
-        logger.error(f"Error finding Chrome: {str(e)}")
-        logger.error(traceback.format_exc())
-        return {
-            "success": False,
-            "error": str(e),
-            "traceback": traceback.format_exc(),
-            "timestamp": datetime.now().isoformat()
-        }
-
-@app.get("/debug/test-playwright")
-def debug_test_playwright(username: str = Depends(get_current_username)):
-    """Debug endpoint to test Playwright"""
-    logger.info(f"Debug test-playwright endpoint accessed by {username}")
-
-    try:
-        # Import the test_playwright module
-        import importlib.util
-        spec = importlib.util.spec_from_file_location("test_playwright", "test_playwright.py")
-        test_playwright = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(test_playwright)
-
-        # Run the Playwright tests
-        test_results = test_playwright.run_tests()
-
-        # Add timestamp
-        test_results["timestamp"] = datetime.now().isoformat()
-
-        return test_results
-    except Exception as e:
-        import traceback
-        logger.error(f"Error testing Playwright: {str(e)}")
-        logger.error(traceback.format_exc())
-        return {
-            "success": False,
-            "error": str(e),
-            "traceback": traceback.format_exc(),
-            "timestamp": datetime.now().isoformat()
-        }
-
-@app.get("/debug/simple-browser-test")
-def debug_simple_browser_test(username: str = Depends(get_current_username)):
-    """Debug endpoint to run a simple browser test"""
-    logger.info(f"Debug simple-browser-test endpoint accessed by {username}")
-
-    try:
-        # Import the simple_browser_test module
-        import importlib.util
-        spec = importlib.util.spec_from_file_location("simple_browser_test", "simple_browser_test.py")
-        simple_browser_test = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(simple_browser_test)
-
-        # Run the browser test
-        test_result = simple_browser_test.test_browser()
-
-        # Add timestamp
-        test_result["timestamp"] = datetime.now().isoformat()
-
-        # Add environment information
-        test_result["environment"] = {
-            "PLAYWRIGHT_BROWSERS_PATH": os.environ.get("PLAYWRIGHT_BROWSERS_PATH"),
-            "browsers_dir_exists": os.path.exists(os.environ.get("PLAYWRIGHT_BROWSERS_PATH", "")),
-            "python_path": sys.executable
-        }
-
-        return test_result
-    except Exception as e:
-        import traceback
-        logger.error(f"Error running simple browser test: {str(e)}")
-        logger.error(traceback.format_exc())
-        return {
-            "success": False,
-            "error": str(e),
-            "traceback": traceback.format_exc(),
-            "timestamp": datetime.now().isoformat()
-        }
-
-@app.get("/debug/logs")
-def debug_logs(
-    log_type: str = "error",
-    max_lines: int = 100,
-    username: str = Depends(get_current_username)
-):
-    """Debug endpoint to get focused logs"""
-    logger.info(f"Debug logs endpoint accessed by {username} for log_type={log_type}")
-
-    if log_type == "error":
-        logs = get_recent_error_logs(max_lines)
-        title = "Recent Error Logs"
-    elif log_type == "supabase":
-        logs = get_recent_supabase_logs(max_lines)
-        title = "Recent Supabase Logs"
-    else:
-        return {
-            "error": f"Invalid log_type: {log_type}. Valid options are 'error' and 'supabase'.",
-            "timestamp": datetime.now().isoformat()
-        }
-
-    return {
-        "title": title,
-        "log_type": log_type,
-        "max_lines": max_lines,
-        "count": len(logs),
-        "logs": logs,
-        "timestamp": datetime.now().isoformat()
-    }
-
-@app.get("/debug/test-auth")
-def debug_test_auth(
-    test_username: Optional[str] = None,
-    test_password: Optional[str] = None,
-    username: str = Depends(get_current_username)
-):
-    """Debug endpoint to test authentication with the college portal"""
-    logger.info(f"Debug test-auth endpoint accessed by {username}")
-
-    # Use the provided test credentials or fall back to the configured ones
-    auth_username = test_username or API_USERNAME
-    auth_password = test_password or API_PASSWORD
-
-    # Create a session
-    session = requests.Session()
-    session.headers.update({
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-    })
-
-    # Try to authenticate using requests
-    try:
-        # Import login utilities
-        from login_utils import login, login_to_attendance, ATTENDANCE_PORTAL_URL
-
-        # Log the username and password length (don't log the actual password)
-        logger.info(f"Testing authentication with username: {auth_username}, password length: {len(auth_password)}")
-
-        # Try to log in to the main portal
-        main_success, main_error = login(session, auth_username, auth_password)
-
-        # Try to log in to the attendance portal
-        attendance_success, attendance_error = login_to_attendance(session, auth_username, auth_password)
-
-        # Check if we can access the attendance portal
-        try:
-            response = session.get(ATTENDANCE_PORTAL_URL)
-            attendance_access = "login" not in response.url.lower()
-        except Exception as e:
-            attendance_access = False
-            logger.error(f"Error accessing attendance portal: {e}")
-
-        # Return the results
-        return {
-            "main_portal": {
-                "success": main_success,
-                "error": main_error
-            },
-            "attendance_portal": {
-                "success": attendance_success,
-                "error": attendance_error
-            },
-            "attendance_access": attendance_access,
-            "credentials": {
-                "username": auth_username,
-                "password_length": len(auth_password)
-            },
-            "timestamp": datetime.now().isoformat()
-        }
-    except Exception as e:
-        import traceback
-        logger.error(f"Error testing authentication: {e}")
-        logger.error(traceback.format_exc())
-        return {
-            "success": False,
-            "error": str(e),
-            "traceback": traceback.format_exc(),
-            "timestamp": datetime.now().isoformat()
-        }
-
-@app.get("/debug/download-chromium")
-def debug_download_chromium(username: str = Depends(get_current_username)):
-    """Debug endpoint to download Chromium directly"""
-    logger.info(f"Debug download-chromium endpoint accessed by {username}")
-
-    try:
-        # Import the download_chromium module
-        import importlib.util
-        spec = importlib.util.spec_from_file_location("download_chromium", "download_chromium.py")
-        download_chromium = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(download_chromium)
-
-        # Download and set up Chromium
-        success = download_chromium.download_and_setup_chromium()
-
-        # Verify installation
-        verification = download_chromium.verify_installation()
-
-        # Check browser paths
-        browser_paths = []
-        browsers_path = os.environ.get("PLAYWRIGHT_BROWSERS_PATH", "/opt/render/project/browsers")
-        if os.path.exists(browsers_path):
-            browser_paths = [os.path.join(browsers_path, d) for d in os.listdir(browsers_path)
-                           if os.path.isdir(os.path.join(browsers_path, d))]
-
-        # Check for headless_shell
-        headless_shell = os.path.join(browsers_path, "chromium_headless_shell-1169", "chrome-linux", "headless_shell")
-        headless_shell_exists = os.path.exists(headless_shell)
-        headless_shell_executable = os.access(headless_shell, os.X_OK) if headless_shell_exists else False
-
-        result = {
-            "success": success,
-            "verification": verification,
-            "browser_paths": browser_paths,
-            "headless_shell_exists": headless_shell_exists,
-            "headless_shell_executable": headless_shell_executable,
-            "headless_shell_path": headless_shell,
-            "environment": {
-                "PLAYWRIGHT_BROWSERS_PATH": os.environ.get("PLAYWRIGHT_BROWSERS_PATH"),
-                "browsers_dir_exists": os.path.exists(browsers_path),
-                "python_path": sys.executable
-            },
-            "timestamp": datetime.now().isoformat()
-        }
-
-        return result
-    except Exception as e:
-        import traceback
-        logger.error(f"Error downloading Chromium: {str(e)}")
-        logger.error(traceback.format_exc())
-        return {
-            "success": False,
-            "error": str(e),
-            "traceback": traceback.format_exc(),
-            "timestamp": datetime.now().isoformat()
-        }
+# Debug endpoint removed to streamline application
 
 @app.post("/scrape", response_model=ScrapeResponse)
 async def scrape_data(
@@ -696,7 +340,7 @@ async def process_scrape_job(
                 username,
                 password,
                 academic_year,
-                workers=2,  # Further reduced from 4 to 2 for Render free tier
+                workers=1,  # Reduced to 1 worker to minimize resource usage on Render
                 worker_mode="thread"
             )
             scrape_results["attendance"] = attendance_result
@@ -731,7 +375,7 @@ async def process_scrape_job(
                 username,
                 password,
                 academic_year,
-                workers=2,  # Further reduced from 4 to 2 for Render free tier
+                workers=1,  # Reduced to 1 worker to minimize resource usage on Render
                 worker_mode="thread"
             )
             scrape_results["mid_marks"] = mid_marks_result
@@ -766,7 +410,7 @@ async def process_scrape_job(
                 username,
                 password,
                 academic_year,
-                workers=2,  # Further reduced from 4 to 2 for Render free tier
+                workers=1,  # Reduced to 1 worker to minimize resource usage on Render
                 worker_mode="thread"
             )
             scrape_results["personal_details"] = personal_details_result

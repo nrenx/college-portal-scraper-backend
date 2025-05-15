@@ -1,0 +1,35 @@
+# Ignore unnecessary test and setup files
+test_*.py
+*_test.py
+simple_browser_test.py
+download_chromium.py
+install_browsers.py
+find_chrome.py
+debug_chrome.py
+install_playwright.sh
+startup.sh
+
+# Ignore development files
+Dockerfile
+docker-compose.yml
+.vscode/
+.idea/
+
+# Ignore documentation
+*.md
+docs/
+
+# Ignore test data
+test_data/
+screenshots/
+*.png
+*.jpg
+*.jpeg
+
+# Ignore git files
+.git/
+.gitignore
+
+# Ignore logs
+*.log
+logs/
