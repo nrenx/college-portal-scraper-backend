@@ -32,6 +32,15 @@ LOGIN_URL = ATTENDANCE_PORTAL_URL  # This will redirect to login page if not aut
 ATTENDANCE_LOGIN_URL = f"{BASE_URL}/attendance/attendanceLogin.php"
 MID_MARKS_URL = MID_MARKS_PORTAL_URL
 
+# Set Playwright browsers path if not already set
+PLAYWRIGHT_BROWSERS_PATH = os.environ.get("PLAYWRIGHT_BROWSERS_PATH")
+if not PLAYWRIGHT_BROWSERS_PATH:
+    PLAYWRIGHT_BROWSERS_PATH = "/opt/render/project/browsers"
+    os.environ["PLAYWRIGHT_BROWSERS_PATH"] = PLAYWRIGHT_BROWSERS_PATH
+    logger.info(f"Setting PLAYWRIGHT_BROWSERS_PATH to {PLAYWRIGHT_BROWSERS_PATH}")
+else:
+    logger.info(f"Using existing PLAYWRIGHT_BROWSERS_PATH: {PLAYWRIGHT_BROWSERS_PATH}")
+
 # Check if Playwright is available
 try:
     from playwright.sync_api import sync_playwright, Page, Browser, BrowserContext

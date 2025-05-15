@@ -8,7 +8,17 @@ import os
 import sys
 import logging
 import json
+import subprocess
 from pathlib import Path
+
+# Set Playwright browsers path if not already set
+PLAYWRIGHT_BROWSERS_PATH = os.environ.get("PLAYWRIGHT_BROWSERS_PATH")
+if not PLAYWRIGHT_BROWSERS_PATH:
+    PLAYWRIGHT_BROWSERS_PATH = "/opt/render/project/browsers"
+    os.environ["PLAYWRIGHT_BROWSERS_PATH"] = PLAYWRIGHT_BROWSERS_PATH
+    print(f"Setting PLAYWRIGHT_BROWSERS_PATH to {PLAYWRIGHT_BROWSERS_PATH}")
+else:
+    print(f"Using existing PLAYWRIGHT_BROWSERS_PATH: {PLAYWRIGHT_BROWSERS_PATH}")
 
 # Configure logging
 logging.basicConfig(

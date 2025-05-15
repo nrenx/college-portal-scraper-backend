@@ -18,6 +18,8 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: 3.9.0
+      - key: PLAYWRIGHT_BROWSERS_PATH
+        value: /opt/render/project/browsers
       - key: SUPABASE_URL
         sync: false
       - key: SUPABASE_KEY

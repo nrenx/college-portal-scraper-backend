@@ -7,11 +7,31 @@ import sys
 import logging
 import json
 import re
+import subprocess
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 import secrets
 import time
 from datetime import datetime
+
+# Set Playwright browsers path if not already set
+PLAYWRIGHT_BROWSERS_PATH = os.environ.get("PLAYWRIGHT_BROWSERS_PATH")
+if not PLAYWRIGHT_BROWSERS_PATH:
+    PLAYWRIGHT_BROWSERS_PATH = "/opt/render/project/browsers"
+    os.environ["PLAYWRIGHT_BROWSERS_PATH"] = PLAYWRIGHT_BROWSERS_PATH
+    print(f"Setting PLAYWRIGHT_BROWSERS_PATH to {PLAYWRIGHT_BROWSERS_PATH}")
+else:
+    print(f"Using existing PLAYWRIGHT_BROWSERS_PATH: {PLAYWRIGHT_BROWSERS_PATH}")
+
+# Try to install Playwright browsers at startup
+try:
+    print("Installing Playwright browsers at startup...")
+    subprocess.run(
+        [sys.executable, "install_browsers.py"],
+        check=False
+    )
+except Exception as e:
+    print(f"Error installing Playwright browsers at startup: {e}")
 
 # Import job storage module
 from job_storage import save_job, load_job, list_jobs

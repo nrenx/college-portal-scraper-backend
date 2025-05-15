@@ -3,6 +3,20 @@
 # Script to install Playwright and its browsers
 echo "Installing Playwright browsers..."
 
+# Create a custom directory for Playwright browsers
+PLAYWRIGHT_BROWSERS_PATH="/opt/render/project/browsers"
+mkdir -p $PLAYWRIGHT_BROWSERS_PATH
+chmod -R 777 $PLAYWRIGHT_BROWSERS_PATH
+echo "Created custom browsers directory at $PLAYWRIGHT_BROWSERS_PATH"
+
+# Export the environment variable
+export PLAYWRIGHT_BROWSERS_PATH=$PLAYWRIGHT_BROWSERS_PATH
+echo "PLAYWRIGHT_BROWSERS_PATH=$PLAYWRIGHT_BROWSERS_PATH"
+
+# Add to .bashrc and .profile
+echo "export PLAYWRIGHT_BROWSERS_PATH=$PLAYWRIGHT_BROWSERS_PATH" >> ~/.bashrc
+echo "export PLAYWRIGHT_BROWSERS_PATH=$PLAYWRIGHT_BROWSERS_PATH" >> ~/.profile
+
 # Install system dependencies
 echo "Installing system dependencies..."
 apt-get update && apt-get install -y \
@@ -29,9 +43,9 @@ apt-get update && apt-get install -y \
     libxext6 \
     libx11-xcb1
 
-# Install Playwright browsers
-echo "Installing Playwright browsers..."
-python -m playwright install --with-deps chromium
+# Install Playwright browsers with the custom path
+echo "Installing Playwright browsers to $PLAYWRIGHT_BROWSERS_PATH..."
+PLAYWRIGHT_BROWSERS_PATH=$PLAYWRIGHT_BROWSERS_PATH python -m playwright install --with-deps chromium
 
 # Verify installation
 echo "Verifying installation..."
@@ -39,6 +53,7 @@ python -m playwright --version
 
 # List installed browsers
 echo "Listing installed browsers..."
+ls -la $PLAYWRIGHT_BROWSERS_PATH || echo "No browsers found in $PLAYWRIGHT_BROWSERS_PATH"
 ls -la ~/.cache/ms-playwright/ || echo "No browsers found in ~/.cache/ms-playwright/"
 ls -la /opt/render/.cache/ms-playwright/ || echo "No browsers found in /opt/render/.cache/ms-playwright/"
 
