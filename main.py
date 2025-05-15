@@ -26,6 +26,12 @@ else:
 # Try to install Playwright browsers at startup
 try:
     print("Installing Playwright browsers at startup...")
+    # First try the simple browser test
+    subprocess.run(
+        [sys.executable, "simple_browser_test.py"],
+        check=False
+    )
+    # If that doesn't work, try the more comprehensive installer
     subprocess.run(
         [sys.executable, "install_browsers.py"],
         check=False
@@ -334,6 +340,43 @@ def debug_test_playwright(username: str = Depends(get_current_username)):
     except Exception as e:
         import traceback
         logger.error(f"Error testing Playwright: {str(e)}")
+        logger.error(traceback.format_exc())
+        return {
+            "success": False,
+            "error": str(e),
+            "traceback": traceback.format_exc(),
+            "timestamp": datetime.now().isoformat()
+        }
+
+@app.get("/debug/simple-browser-test")
+def debug_simple_browser_test(username: str = Depends(get_current_username)):
+    """Debug endpoint to run a simple browser test"""
+    logger.info(f"Debug simple-browser-test endpoint accessed by {username}")
+
+    try:
+        # Import the simple_browser_test module
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("simple_browser_test", "simple_browser_test.py")
+        simple_browser_test = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(simple_browser_test)
+
+        # Run the browser test
+        test_result = simple_browser_test.test_browser()
+
+        # Add timestamp
+        test_result["timestamp"] = datetime.now().isoformat()
+
+        # Add environment information
+        test_result["environment"] = {
+            "PLAYWRIGHT_BROWSERS_PATH": os.environ.get("PLAYWRIGHT_BROWSERS_PATH"),
+            "browsers_dir_exists": os.path.exists(os.environ.get("PLAYWRIGHT_BROWSERS_PATH", "")),
+            "python_path": sys.executable
+        }
+
+        return test_result
+    except Exception as e:
+        import traceback
+        logger.error(f"Error running simple browser test: {str(e)}")
         logger.error(traceback.format_exc())
         return {
             "success": False,

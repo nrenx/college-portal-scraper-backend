@@ -17,35 +17,42 @@ echo "PLAYWRIGHT_BROWSERS_PATH=$PLAYWRIGHT_BROWSERS_PATH"
 echo "export PLAYWRIGHT_BROWSERS_PATH=$PLAYWRIGHT_BROWSERS_PATH" >> ~/.bashrc
 echo "export PLAYWRIGHT_BROWSERS_PATH=$PLAYWRIGHT_BROWSERS_PATH" >> ~/.profile
 
-# Install system dependencies
-echo "Installing system dependencies..."
-apt-get update && apt-get install -y \
-    libglib2.0-0 \
-    libnss3 \
-    libnspr4 \
-    libatk1.0-0 \
-    libatk-bridge2.0-0 \
-    libcups2 \
-    libdrm2 \
-    libxkbcommon0 \
-    libxcomposite1 \
-    libxdamage1 \
-    libxfixes3 \
-    libxrandr2 \
-    libgbm1 \
-    libasound2 \
-    libpango-1.0-0 \
-    libpangocairo-1.0-0 \
-    libcairo2 \
-    libatspi2.0-0 \
-    libx11-6 \
-    libxcb1 \
-    libxext6 \
-    libx11-xcb1
+# System dependencies are already installed on Render
+echo "Skipping system dependencies installation (already handled by Render)..."
 
-# Install Playwright browsers with the custom path
+# Install Playwright browsers with the custom path (without --with-deps to avoid requiring root)
 echo "Installing Playwright browsers to $PLAYWRIGHT_BROWSERS_PATH..."
-PLAYWRIGHT_BROWSERS_PATH=$PLAYWRIGHT_BROWSERS_PATH python -m playwright install --with-deps chromium
+PLAYWRIGHT_BROWSERS_PATH=$PLAYWRIGHT_BROWSERS_PATH python -m playwright install chromium
+
+# Try alternative installation approach
+echo "Trying alternative browser installation approach..."
+cat > install_browser.py << 'EOF'
+from playwright.sync_api import sync_playwright
+import os
+import sys
+
+# Set browsers path
+browsers_path = os.environ.get("PLAYWRIGHT_BROWSERS_PATH")
+if browsers_path:
+    print(f"Using browsers path: {browsers_path}")
+else:
+    print("PLAYWRIGHT_BROWSERS_PATH not set")
+
+try:
+    with sync_playwright() as p:
+        # This will trigger the browser download
+        browser = p.chromium.launch()
+        browser.close()
+        print("Successfully launched and closed browser")
+except Exception as e:
+    print(f"Error: {e}")
+    sys.exit(1)
+
+print("Browser installation successful")
+EOF
+
+# Run the alternative installation script
+python install_browser.py
 
 # Verify installation
 echo "Verifying installation..."

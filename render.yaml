@@ -7,13 +7,12 @@ services:
       # Install Python dependencies
       pip install -r requirements.txt
 
-      # Install Playwright and browsers
-      chmod +x install_playwright.sh && ./install_playwright.sh
-
-      # Run debug scripts
-      chmod +x test_playwright.py && python test_playwright.py
-      chmod +x find_chrome.py && python find_chrome.py
-      chmod +x debug_chrome.py && python debug_chrome.py
+      # Make scripts executable
+      chmod +x install_playwright.sh
+      chmod +x install_browsers.py
+      chmod +x test_playwright.py
+      chmod +x find_chrome.py
+      chmod +x debug_chrome.py
     startCommand: gunicorn -k uvicorn.workers.UvicornWorker -w 4 -b 0.0.0.0:$PORT --timeout 300 main:app
     envVars:
       - key: PYTHON_VERSION
