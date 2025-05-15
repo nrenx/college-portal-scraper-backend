@@ -62,16 +62,26 @@ except ImportError:
     TQDM_AVAILABLE = False
     print("Warning: tqdm is not installed. Progress bars will not be available.")
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler("supabase_uploader_new.log"),
-        logging.StreamHandler(sys.stdout)
-    ]
-)
-logger = logging.getLogger("supabase_uploader_new")
+# Import custom logging configuration if available
+try:
+    from logging_config import configure_logging, get_logger
+    # Configure logging with more detailed settings
+    configure_logging(console_level=logging.INFO, file_level=logging.DEBUG, enable_json=True)
+    # Get a logger with extra context
+    logger = get_logger("supabase_uploader", {"component": "uploader"})
+    logger.info("Using custom logging configuration")
+except ImportError:
+    # Fall back to basic logging configuration
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        handlers=[
+            logging.FileHandler("supabase_uploader_new.log"),
+            logging.StreamHandler(sys.stdout)
+        ]
+    )
+    logger = logging.getLogger("supabase_uploader_new")
+    logger.info("Using basic logging configuration")
 
 # Global variables
 upload_stats = {
@@ -92,6 +102,17 @@ stats_lock = Lock()
 existing_files_cache = {}
 existing_dirs_cache = set()
 cache_lock = Lock()
+
+def format_size(size_bytes):
+    """Format size in bytes to human-readable format."""
+    if size_bytes < 1024:
+        return f"{size_bytes} B"
+    elif size_bytes < 1024 * 1024:
+        return f"{size_bytes / 1024:.2f} KB"
+    elif size_bytes < 1024 * 1024 * 1024:
+        return f"{size_bytes / (1024 * 1024):.2f} MB"
+    else:
+        return f"{size_bytes / (1024 * 1024 * 1024):.2f} GB"
 
 class SupabaseClient:
     """
@@ -239,7 +260,25 @@ class SupabaseClient:
                 file_size = file_path.stat().st_size
 
                 if isinstance(result, Exception):
-                    logger.error(f"Error uploading {file_path}: {result}")
+                    # Log detailed error information
+                    error_type = type(result).__name__
+                    error_message = str(result)
+                    file_name = os.path.basename(file_path)
+                    file_size = file_path.stat().st_size
+
+                    # Create structured error log
+                    logger.error(
+                        f"Error uploading file {file_name} ({format_size(file_size)})",
+                        extra={
+                            "error_type": error_type,
+                            "error_message": error_message,
+                            "file_path": str(file_path),
+                            "file_size": file_size,
+                            "supabase_path": str(file_path.relative_to(source_dir)).replace('\\', '/'),
+                            "bucket": bucket,
+                            "operation": "upload_file"
+                        }
+                    )
                     stats["failed"] += 1
                 else:
                     # Check if the file was a duplicate (already exists)

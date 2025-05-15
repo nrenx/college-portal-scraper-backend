@@ -87,9 +87,16 @@ def login(session: requests.Session, username: str = USERNAME, password: str = P
             logger.info("CSRF token extracted")
 
         # Prepare login data - using the field names from the actual form
+        # Log the username and password length for debugging (don't log the actual password)
+        logger.info(f"Attempting login with username: {username}, password length: {len(password)}")
+
+        # Ensure the username and password are properly encoded strings
+        username_str = str(username).strip()
+        password_str = str(password).strip()
+
         login_data = {
-            'username': username,  # Field name confirmed from the login process
-            'password': password,  # Field name confirmed from the login process
+            'username': username_str,  # Field name confirmed from the login process
+            'password': password_str,  # Field name confirmed from the login process
         }
 
         # Look for the submit button to get its name and value

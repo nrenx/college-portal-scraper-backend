@@ -65,16 +65,14 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # Import scraper modules
 from scraper_wrapper import run_scraper, run_uploader
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler("api.log"),
-        logging.StreamHandler(sys.stdout)
-    ]
-)
-logger = logging.getLogger("api")
+# Import custom logging configuration
+from logging_config import configure_logging, get_logger, get_recent_error_logs, get_recent_supabase_logs
+
+# Configure logging with more detailed settings
+configure_logging(console_level=logging.INFO, file_level=logging.DEBUG, enable_json=True)
+
+# Get a logger with extra context
+logger = get_logger("api", {"component": "api_server"})
 
 # Load environment variables
 from dotenv import load_dotenv
@@ -388,6 +386,105 @@ def debug_simple_browser_test(username: str = Depends(get_current_username)):
     except Exception as e:
         import traceback
         logger.error(f"Error running simple browser test: {str(e)}")
+        logger.error(traceback.format_exc())
+        return {
+            "success": False,
+            "error": str(e),
+            "traceback": traceback.format_exc(),
+            "timestamp": datetime.now().isoformat()
+        }
+
+@app.get("/debug/logs")
+def debug_logs(
+    log_type: str = "error",
+    max_lines: int = 100,
+    username: str = Depends(get_current_username)
+):
+    """Debug endpoint to get focused logs"""
+    logger.info(f"Debug logs endpoint accessed by {username} for log_type={log_type}")
+
+    if log_type == "error":
+        logs = get_recent_error_logs(max_lines)
+        title = "Recent Error Logs"
+    elif log_type == "supabase":
+        logs = get_recent_supabase_logs(max_lines)
+        title = "Recent Supabase Logs"
+    else:
+        return {
+            "error": f"Invalid log_type: {log_type}. Valid options are 'error' and 'supabase'.",
+            "timestamp": datetime.now().isoformat()
+        }
+
+    return {
+        "title": title,
+        "log_type": log_type,
+        "max_lines": max_lines,
+        "count": len(logs),
+        "logs": logs,
+        "timestamp": datetime.now().isoformat()
+    }
+
+@app.get("/debug/test-auth")
+def debug_test_auth(
+    test_username: Optional[str] = None,
+    test_password: Optional[str] = None,
+    username: str = Depends(get_current_username)
+):
+    """Debug endpoint to test authentication with the college portal"""
+    logger.info(f"Debug test-auth endpoint accessed by {username}")
+
+    # Use the provided test credentials or fall back to the configured ones
+    auth_username = test_username or API_USERNAME
+    auth_password = test_password or API_PASSWORD
+
+    # Create a session
+    session = requests.Session()
+    session.headers.update({
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+    })
+
+    # Try to authenticate using requests
+    try:
+        # Import login utilities
+        from login_utils import login, login_to_attendance, ATTENDANCE_PORTAL_URL
+
+        # Log the username and password length (don't log the actual password)
+        logger.info(f"Testing authentication with username: {auth_username}, password length: {len(auth_password)}")
+
+        # Try to log in to the main portal
+        main_success, main_error = login(session, auth_username, auth_password)
+
+        # Try to log in to the attendance portal
+        attendance_success, attendance_error = login_to_attendance(session, auth_username, auth_password)
+
+        # Check if we can access the attendance portal
+        try:
+            response = session.get(ATTENDANCE_PORTAL_URL)
+            attendance_access = "login" not in response.url.lower()
+        except Exception as e:
+            attendance_access = False
+            logger.error(f"Error accessing attendance portal: {e}")
+
+        # Return the results
+        return {
+            "main_portal": {
+                "success": main_success,
+                "error": main_error
+            },
+            "attendance_portal": {
+                "success": attendance_success,
+                "error": attendance_error
+            },
+            "attendance_access": attendance_access,
+            "credentials": {
+                "username": auth_username,
+                "password_length": len(auth_password)
+            },
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        import traceback
+        logger.error(f"Error testing authentication: {e}")
         logger.error(traceback.format_exc())
         return {
             "success": False,

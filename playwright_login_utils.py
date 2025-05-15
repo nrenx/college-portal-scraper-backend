@@ -176,9 +176,19 @@ def playwright_login(context: Any, username: str = USERNAME, password: str = PAS
         page.wait_for_selector('input[name="username"]', state="visible", timeout=10000)
 
         # Fill in the login form
-        logger.info("Filling in login form...")
-        page.fill('input[name="username"]', username)
-        page.fill('input[name="password"]', password)
+        logger.info(f"Filling in login form with username: {username}, password length: {len(password)}")
+
+        # Ensure the username and password are properly encoded strings
+        username_str = str(username).strip()
+        password_str = str(password).strip()
+
+        # Clear the fields first
+        page.evaluate('() => document.querySelector("input[name=\'username\']").value = ""')
+        page.evaluate('() => document.querySelector("input[name=\'password\']").value = ""')
+
+        # Fill the fields using type method for better compatibility
+        page.type('input[name="username"]', username_str, delay=50)
+        page.type('input[name="password"]', password_str, delay=50)
 
         # Find and click the submit button
         submit_button = page.locator('input[type="submit"]')
@@ -230,9 +240,19 @@ def playwright_login_to_attendance(context: Any, username: str = USERNAME, passw
         page.wait_for_selector('input[name="username"]', state="visible", timeout=10000)
 
         # Fill in the login form
-        logger.info("Filling in attendance login form...")
-        page.fill('input[name="username"]', username)
-        page.fill('input[name="password"]', password)
+        logger.info(f"Filling in attendance login form with username: {username}, password length: {len(password)}")
+
+        # Ensure the username and password are properly encoded strings
+        username_str = str(username).strip()
+        password_str = str(password).strip()
+
+        # Clear the fields first
+        page.evaluate('() => document.querySelector("input[name=\'username\']").value = ""')
+        page.evaluate('() => document.querySelector("input[name=\'password\']").value = ""')
+
+        # Fill the fields using type method for better compatibility
+        page.type('input[name="username"]', username_str, delay=50)
+        page.type('input[name="password"]', password_str, delay=50)
 
         # Find and click the submit button
         submit_button = page.locator('input[type="submit"]')
