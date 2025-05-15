@@ -9,7 +9,18 @@ import subprocess
 import logging
 import json
 from pathlib import Path
-from typing import Dict, Any, List, Optional, Union
+from typing import Dict, Any, List, Optional
+
+# Import Chrome configuration
+try:
+    from chrome_config import get_chrome_path, get_chromedriver_path
+except ImportError:
+    # Define fallback functions if the module is not available
+    def get_chrome_path():
+        return None
+    def get_chromedriver_path():
+        return None
+
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -92,6 +103,17 @@ def run_scraper(
         "--no-csv",  # Disable CSV generation to save time
         "--headless"  # Always use headless mode on Render
     ]
+
+    # Add Chrome and ChromeDriver paths if available
+    chrome_path = get_chrome_path()
+    if chrome_path:
+        cmd.extend(["--chrome-path", chrome_path])
+        logger.info(f"Using Chrome binary at: {chrome_path}")
+
+    chromedriver_path = get_chromedriver_path()
+    if chromedriver_path:
+        cmd.extend(["--chromedriver-path", chromedriver_path])
+        logger.info(f"Using ChromeDriver at: {chromedriver_path}")
 
     # Add max-retries parameter only if it's specified
     if max_retries is not None and scraper_type != "personal_details":
