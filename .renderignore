@@ -10,9 +10,10 @@ install_playwright.sh
 startup.sh
 system_check.py
 
-# Ignore development files
-Dockerfile
-docker-compose.yml
+# Keep Docker files for deployment
+# Dockerfile
+# docker-compose.yml
+# .dockerignore
 .vscode/
 .idea/
 .DS_Store

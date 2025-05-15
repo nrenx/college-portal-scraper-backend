@@ -83,14 +83,14 @@ Returns the status of a scraping job.
 
 ## Deployment
 
-### Render.com
+### Render.com with Docker
 
-This repository includes a `render.yaml` file for automatic deployment to Render.com.
+This repository includes a `render.yaml` file and `Dockerfile` for automatic deployment to Render.com using Docker.
 
 1. Push this backend folder to a GitHub repository
 2. In Render.com, click "New" and select "Blueprint"
 3. Connect your GitHub repository
-4. Render will automatically detect the `render.yaml` file and set up the service
+4. Render will automatically detect the `render.yaml` file and set up the service as a Docker container
 5. Add the following environment variables:
    - `API_USERNAME`: Your API username
    - `API_PASSWORD`: Your API password
@@ -102,11 +102,24 @@ Alternatively, you can manually set up a Web Service:
 
 1. Create a new Web Service
 2. Connect your GitHub repository
-3. Set the following:
-   - Build Command: `pip install -r requirements.txt`
-   - Start Command: `gunicorn -k uvicorn.workers.UvicornWorker -w 4 -b 0.0.0.0:$PORT main:app`
-4. Add environment variables from your `.env` file
-5. Deploy
+3. Select "Docker" as the environment
+4. Set the following:
+   - Docker Build Context: `.`
+   - Dockerfile Path: `./Dockerfile`
+5. Add environment variables from your `.env` file
+6. Deploy
+
+### Local Development with Docker
+
+To run the application locally using Docker:
+
+1. Make sure Docker and Docker Compose are installed on your machine
+2. Create a `.env` file with your environment variables
+3. Run the following command:
+   ```bash
+   docker-compose up --build
+   ```
+4. The API will be available at http://localhost:8000
 
 ### Environment Variables
 

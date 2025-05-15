@@ -11,27 +11,9 @@ import secrets
 import time
 from datetime import datetime
 
-# Set Playwright browsers path if not already set
-PLAYWRIGHT_BROWSERS_PATH = os.environ.get("PLAYWRIGHT_BROWSERS_PATH")
-if not PLAYWRIGHT_BROWSERS_PATH:
-    PLAYWRIGHT_BROWSERS_PATH = "/opt/render/project/browsers"
-    os.environ["PLAYWRIGHT_BROWSERS_PATH"] = PLAYWRIGHT_BROWSERS_PATH
-    print(f"Setting PLAYWRIGHT_BROWSERS_PATH to {PLAYWRIGHT_BROWSERS_PATH}")
-else:
-    print(f"Using existing PLAYWRIGHT_BROWSERS_PATH: {PLAYWRIGHT_BROWSERS_PATH}")
-
-# Set Playwright browsers path without running tests
-os.environ["PLAYWRIGHT_BROWSERS_PATH"] = os.environ.get("PLAYWRIGHT_BROWSERS_PATH", "/opt/render/project/browsers")
-
-# Run minimal Chrome setup
-try:
-    import importlib.util
-    spec = importlib.util.spec_from_file_location("chrome_setup_minimal", "chrome_setup_minimal.py")
-    chrome_setup = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(chrome_setup)
-    chrome_setup.main()
-except Exception as e:
-    print(f"Error running Chrome setup: {e}")
+# In Docker, Chrome is pre-installed, so we don't need to set up Playwright browsers
+# or run Chrome setup scripts. The environment variables are set in the Dockerfile.
+print("Using pre-installed Chrome and ChromeDriver from Docker image")
 
 # Import job storage module
 from job_storage import save_job, load_job, list_jobs

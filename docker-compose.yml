@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+      - API_USERNAME=admin
+      - API_PASSWORD=password
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_KEY=${SUPABASE_KEY}
+      - SUPABASE_BUCKET=demo-usingfastapi
+    volumes:
+      - ./logs:/app/logs
+      - ./job_storage:/app/job_storage
+      - ./student_details:/app/student_details
+    command: gunicorn -k uvicorn.workers.UvicornWorker -w 1 -b 0.0.0.0:8000 --timeout 600 main:app
+    restart: unless-stopped

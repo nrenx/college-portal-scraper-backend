@@ -24,54 +24,23 @@ def get_chrome_path() -> Optional[str]:
     Returns:
         str or None: Path to Chrome binary if found, None otherwise
     """
-    # Check environment variable first
+    # Check environment variable first (set in Dockerfile)
     chrome_path = os.environ.get("CHROME_PATH")
     if chrome_path and os.path.exists(chrome_path):
         logger.info(f"Using Chrome path from environment variable: {chrome_path}")
         return chrome_path
 
-    # Check Playwright browsers directory first (most likely location on Render)
-    playwright_browsers_path = os.environ.get("PLAYWRIGHT_BROWSERS_PATH", "/opt/render/project/browsers")
-    chrome_in_playwright = os.path.join(playwright_browsers_path, "chrome")
-    if os.path.exists(chrome_in_playwright):
-        logger.info(f"Found Chrome in Playwright browsers directory: {chrome_in_playwright}")
-        return chrome_in_playwright
-
-    # Search for Chromium in Playwright directory
-    for root, dirs, files in os.walk(playwright_browsers_path):
-        for file in files:
-            if file == "chrome" or file == "chromium":
-                chromium_path = os.path.join(root, file)
-                logger.info(f"Found Chromium in Playwright directory: {chromium_path}")
-                return chromium_path
-
-    # Common Chrome paths
-    chrome_paths = [
-        # Linux paths
-        "/usr/bin/google-chrome",
-        "/usr/bin/chromium-browser",
-        "/usr/bin/chromium",
-        # Render-specific paths
-        "/opt/render/chrome/chrome",
-        "/opt/google/chrome/chrome",
-        # macOS paths
-        "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-        # Windows paths
-        r"C:\Program Files\Google\Chrome\Application\chrome.exe",
-        r"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe"
-    ]
+    # Docker standard location
+    docker_chrome_path = "/usr/bin/google-chrome"
+    if os.path.exists(docker_chrome_path):
+        logger.info(f"Found Chrome at Docker standard location: {docker_chrome_path}")
+        return docker_chrome_path
 
     # Check if Chrome is in PATH
     chrome_in_path = shutil.which("google-chrome") or shutil.which("chromium-browser") or shutil.which("chrome")
     if chrome_in_path:
         logger.info(f"Found Chrome in PATH: {chrome_in_path}")
         return chrome_in_path
-
-    # Check common locations
-    for path in chrome_paths:
-        if os.path.exists(path):
-            logger.info(f"Found Chrome at: {path}")
-            return path
 
     logger.warning("Chrome binary not found in any standard location")
     return None
@@ -83,42 +52,23 @@ def get_chromedriver_path() -> Optional[str]:
     Returns:
         str or None: Path to ChromeDriver binary if found, None otherwise
     """
-    # Check environment variable first
+    # Check environment variable first (set in Dockerfile)
     chromedriver_path = os.environ.get("CHROMEDRIVER_PATH")
     if chromedriver_path and os.path.exists(chromedriver_path):
         logger.info(f"Using ChromeDriver path from environment variable: {chromedriver_path}")
         return chromedriver_path
 
-    # Check in Playwright browsers directory
-    playwright_browsers_path = os.environ.get("PLAYWRIGHT_BROWSERS_PATH", "/opt/render/project/browsers")
-    chromedriver_in_playwright = os.path.join(playwright_browsers_path, "chromedriver")
-    if os.path.exists(chromedriver_in_playwright):
-        logger.info(f"Found ChromeDriver in Playwright browsers directory: {chromedriver_in_playwright}")
-        return chromedriver_in_playwright
-
-    # Search for ChromeDriver in Playwright directory
-    for root, dirs, files in os.walk(playwright_browsers_path):
-        for file in files:
-            if file == "chromedriver":
-                chromedriver_path = os.path.join(root, file)
-                logger.info(f"Found ChromeDriver in Playwright directory: {chromedriver_path}")
-                return chromedriver_path
+    # Docker standard location
+    docker_chromedriver_path = "/usr/bin/chromedriver"
+    if os.path.exists(docker_chromedriver_path):
+        logger.info(f"Found ChromeDriver at Docker standard location: {docker_chromedriver_path}")
+        return docker_chromedriver_path
 
     # Check if ChromeDriver is in PATH
     chromedriver_in_path = shutil.which("chromedriver")
     if chromedriver_in_path:
         logger.info(f"Found ChromeDriver in PATH: {chromedriver_in_path}")
         return chromedriver_in_path
-
-    # Try to install ChromeDriver using webdriver-manager
-    try:
-        logger.info("Attempting to install ChromeDriver using webdriver-manager...")
-        from webdriver_manager.chrome import ChromeDriverManager
-        driver_path = ChromeDriverManager().install()
-        logger.info(f"Successfully installed ChromeDriver at: {driver_path}")
-        return driver_path
-    except Exception as e:
-        logger.error(f"Failed to install ChromeDriver: {e}")
 
     logger.warning("ChromeDriver binary not found")
     return None
