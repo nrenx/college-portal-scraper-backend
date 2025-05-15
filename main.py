@@ -262,6 +262,36 @@ def debug_test_chrome(username: str = Depends(get_current_username)):
             "timestamp": datetime.now().isoformat()
         }
 
+@app.get("/debug/find-chrome")
+def debug_find_chrome(username: str = Depends(get_current_username)):
+    """Debug endpoint to find Chrome and ChromeDriver binaries"""
+    logger.info(f"Debug find-chrome endpoint accessed by {username}")
+
+    try:
+        # Import the find_chrome module
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("find_chrome", "find_chrome.py")
+        find_chrome = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(find_chrome)
+
+        # Run the Chrome finder
+        finder_results = find_chrome.run_find_chrome()
+
+        # Add timestamp
+        finder_results["timestamp"] = datetime.now().isoformat()
+
+        return finder_results
+    except Exception as e:
+        import traceback
+        logger.error(f"Error finding Chrome: {str(e)}")
+        logger.error(traceback.format_exc())
+        return {
+            "success": False,
+            "error": str(e),
+            "traceback": traceback.format_exc(),
+            "timestamp": datetime.now().isoformat()
+        }
+
 @app.post("/scrape", response_model=ScrapeResponse)
 async def scrape_data(
     request: ScrapeRequest,

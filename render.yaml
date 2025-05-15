@@ -4,8 +4,18 @@ services:
     env: python
     plan: free
     buildCommand: |
+      # Install Chrome
+      apt-get update && apt-get install -y wget gnupg2 unzip
+      wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add -
+      echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google.list
+      apt-get update && apt-get install -y google-chrome-stable
+
+      # Install Python dependencies
       pip install -r requirements.txt
+
+      # Run setup and debug scripts
       chmod +x setup_chrome.sh && ./setup_chrome.sh
+      chmod +x find_chrome.py && python find_chrome.py
       chmod +x debug_chrome.py && python debug_chrome.py
     startCommand: gunicorn -k uvicorn.workers.UvicornWorker -w 4 -b 0.0.0.0:$PORT --timeout 300 main:app
     envVars:

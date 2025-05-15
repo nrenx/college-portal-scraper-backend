@@ -15,12 +15,35 @@ CHROME_PATHS=(
   "/usr/bin/google-chrome"
   "/usr/bin/chromium-browser"
   "/usr/bin/chromium"
+  "/opt/google/chrome/chrome"
+  "/opt/render/project/.render/chrome/chrome"
+  "/opt/render/chrome/chrome"
 )
+
+# Try to find Chrome using which
+WHICH_CHROME=$(which google-chrome-stable 2>/dev/null || which google-chrome 2>/dev/null || which chromium-browser 2>/dev/null || which chromium 2>/dev/null)
+if [ -n "$WHICH_CHROME" ]; then
+  echo "Found Chrome using which: $WHICH_CHROME"
+  CHROME_PATHS+=("$WHICH_CHROME")
+fi
+
+# Look for Chrome in PATH
+echo "PATH: $PATH"
+IFS=':' read -ra PATH_DIRS <<< "$PATH"
+for dir in "${PATH_DIRS[@]}"; do
+  for name in "google-chrome-stable" "google-chrome" "chromium-browser" "chromium"; do
+    if [ -f "$dir/$name" ]; then
+      echo "Found Chrome in PATH: $dir/$name"
+      CHROME_PATHS+=("$dir/$name")
+    fi
+  done
+done
 
 CHROME_PATH=""
 for path in "${CHROME_PATHS[@]}"; do
   if [ -f "$path" ]; then
     CHROME_PATH="$path"
+    echo "Using Chrome binary: $CHROME_PATH"
     break
   fi
 done
@@ -56,12 +79,42 @@ fi
 CHROMEDRIVER_PATHS=(
   "/usr/local/bin/chromedriver"
   "/usr/bin/chromedriver"
+  "/opt/render/project/.render/chromedriver/chromedriver"
+  "/opt/render/chromedriver/chromedriver"
 )
+
+# Try to find ChromeDriver using which
+WHICH_CHROMEDRIVER=$(which chromedriver 2>/dev/null)
+if [ -n "$WHICH_CHROMEDRIVER" ]; then
+  echo "Found ChromeDriver using which: $WHICH_CHROMEDRIVER"
+  CHROMEDRIVER_PATHS+=("$WHICH_CHROMEDRIVER")
+fi
+
+# Look for ChromeDriver in PATH
+IFS=':' read -ra PATH_DIRS <<< "$PATH"
+for dir in "${PATH_DIRS[@]}"; do
+  if [ -f "$dir/chromedriver" ]; then
+    echo "Found ChromeDriver in PATH: $dir/chromedriver"
+    CHROMEDRIVER_PATHS+=("$dir/chromedriver")
+  fi
+done
+
+# Try to install ChromeDriver using webdriver-manager
+echo "Attempting to install ChromeDriver using webdriver-manager..."
+python -c "from webdriver_manager.chrome import ChromeDriverManager; print(ChromeDriverManager().install())" > chromedriver_path.txt 2>/dev/null
+if [ $? -eq 0 ]; then
+  WEBDRIVER_MANAGER_PATH=$(cat chromedriver_path.txt)
+  if [ -n "$WEBDRIVER_MANAGER_PATH" ]; then
+    echo "Found ChromeDriver using webdriver-manager: $WEBDRIVER_MANAGER_PATH"
+    CHROMEDRIVER_PATHS+=("$WEBDRIVER_MANAGER_PATH")
+  fi
+fi
 
 CHROMEDRIVER_PATH=""
 for path in "${CHROMEDRIVER_PATHS[@]}"; do
   if [ -f "$path" ]; then
     CHROMEDRIVER_PATH="$path"
+    echo "Using ChromeDriver binary: $CHROMEDRIVER_PATH"
     break
   fi
 done
@@ -101,11 +154,26 @@ DEBUG_FILE="chrome_setup_debug.txt"
   echo "System information:"
   uname -a
   echo "Directory listing of /usr/bin (grep chrome):"
-  ls -la /usr/bin | grep -i chrome
+  ls -la /usr/bin | grep -i chrome 2>/dev/null || echo "No Chrome found in /usr/bin"
   echo "Directory listing of /usr/local/bin (grep chrome):"
-  ls -la /usr/local/bin | grep -i chrome
+  ls -la /usr/local/bin | grep -i chrome 2>/dev/null || echo "No Chrome found in /usr/local/bin"
+  echo "Directory listing of /opt/render (find chrome):"
+  find /opt/render -name "*chrome*" 2>/dev/null || echo "No Chrome found in /opt/render"
+  echo "Directory listing of /opt/render/project (find chrome):"
+  find /opt/render/project -name "*chrome*" 2>/dev/null || echo "No Chrome found in /opt/render/project"
+  echo "Directory listing of /opt (find chrome):"
+  find /opt -name "*chrome*" 2>/dev/null || echo "No Chrome found in /opt"
+  echo "Directory listing of /usr/bin (find chromedriver):"
+  find /usr/bin -name "*chromedriver*" 2>/dev/null || echo "No ChromeDriver found in /usr/bin"
+  echo "Directory listing of /usr/local/bin (find chromedriver):"
+  find /usr/local/bin -name "*chromedriver*" 2>/dev/null || echo "No ChromeDriver found in /usr/local/bin"
+  echo "Directory listing of /opt/render (find chromedriver):"
+  find /opt/render -name "*chromedriver*" 2>/dev/null || echo "No ChromeDriver found in /opt/render"
   echo "PATH environment variable:"
   echo "$PATH"
+  echo "Checking for Chrome packages:"
+  dpkg -l | grep -i chrome 2>/dev/null || echo "No Chrome packages found with dpkg"
+  apt list --installed | grep -i chrome 2>/dev/null || echo "No Chrome packages found with apt"
 } > "$DEBUG_FILE"
 
 echo "Debug information saved to $DEBUG_FILE"
