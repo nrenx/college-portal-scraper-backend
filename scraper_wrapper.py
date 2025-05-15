@@ -46,7 +46,7 @@ def run_scraper(
     password: str,
     academic_year: str,
     headless: bool = True,
-    workers: int = 1,  # Reduced to 1 worker to minimize resource usage on Render
+    workers: int = 1,  # Using 1 worker to minimize resource usage on Render
     worker_mode: str = "thread",
     delay: float = 3.0,  # Increased delay to reduce load
     max_retries: int = None  # No max retries as per user preference
@@ -318,7 +318,7 @@ def run_scraper(
         }
 
 def run_uploader(
-    workers: int = 4,  # Reduced from 32 to minimize resource usage on Render
+    workers: int = 2,  # Reduced to 2 workers to minimize resource usage on Render
     force_update: bool = False
 ) -> Dict[str, Any]:
     """

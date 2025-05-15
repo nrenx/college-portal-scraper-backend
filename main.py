@@ -23,6 +23,16 @@ else:
 # Set Playwright browsers path without running tests
 os.environ["PLAYWRIGHT_BROWSERS_PATH"] = os.environ.get("PLAYWRIGHT_BROWSERS_PATH", "/opt/render/project/browsers")
 
+# Run minimal Chrome setup
+try:
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("chrome_setup_minimal", "chrome_setup_minimal.py")
+    chrome_setup = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(chrome_setup)
+    chrome_setup.main()
+except Exception as e:
+    print(f"Error running Chrome setup: {e}")
+
 # Import job storage module
 from job_storage import save_job, load_job, list_jobs
 

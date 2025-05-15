@@ -6,6 +6,16 @@ services:
     buildCommand: |
       # Install Python dependencies
       pip install -r requirements.txt
+
+      # Install Playwright browsers
+      python -m playwright install chromium
+
+      # Create necessary directories
+      mkdir -p /opt/render/project/browsers
+      chmod -R 777 /opt/render/project/browsers
+      mkdir -p logs
+      mkdir -p job_storage
+      mkdir -p student_details
     startCommand: gunicorn -k uvicorn.workers.UvicornWorker -w 1 -b 0.0.0.0:$PORT --timeout 600 main:app
     envVars:
       - key: PYTHON_VERSION
